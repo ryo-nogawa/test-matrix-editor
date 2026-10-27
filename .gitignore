@@ -1,0 +1,9 @@
+# macOS
+.DS_Store
+
+# エディタ
+.vscode/
+.idea/
+
+# 機密情報（APIキーなどを書いたローカル用ドキュメント）
+*.local.md

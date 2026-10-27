@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="510" viewBox="0 0 940 510" font-family="'Hiragino Sans', 'Noto Sans JP', Meiryo, sans-serif">
+<title>画面イメージ：ツールバー、固定表示、行の挿入、プルダウン</title>
+<rect width="940" height="510" fill="#fff"/>
+<text x="30" y="38" font-size="20" font-weight="700" fill="#222" text-anchor="start">条件の列を固定し、行と列は＋で挿入する画面</text>
+<rect x="30" y="55" width="870" height="50" rx="10" fill="#fff" stroke="#9aa0a8" stroke-width="1.5"/>
+<rect x="45" y="65" width="125" height="30" rx="6" fill="#fff" stroke="#9aa0a8" stroke-width="1.2"/>
+<text x="107.5" y="85" font-size="14" font-weight="400" fill="#222" text-anchor="middle">Markdown出力</text>
+<rect x="185" y="65" width="125" height="30" rx="6" fill="#fff" stroke="#9aa0a8" stroke-width="1.2"/>
+<text x="247.5" y="85" font-size="14" font-weight="400" fill="#222" text-anchor="middle">読み込み</text>
+<rect x="325" y="65" width="125" height="30" rx="6" fill="#fff" stroke="#9aa0a8" stroke-width="1.2"/>
+<text x="387.5" y="85" font-size="14" font-weight="400" fill="#222" text-anchor="middle">指示文コピー</text>
+<rect x="465" y="65" width="125" height="30" rx="6" fill="#fff" stroke="#9aa0a8" stroke-width="1.2"/>
+<text x="527.5" y="85" font-size="14" font-weight="400" fill="#222" text-anchor="middle">元に戻す</text>
+<rect x="605" y="65" width="125" height="30" rx="6" fill="#fff" stroke="#9aa0a8" stroke-width="1.2"/>
+<text x="667.5" y="85" font-size="14" font-weight="400" fill="#222" text-anchor="middle">やり直し</text>
+<rect x="30" y="135" width="500" height="235" fill="#eef1f5"/>
+<rect x="30" y="135" width="55" height="60" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="38" y="170" font-size="14" font-weight="700" fill="#222" text-anchor="start">種類</text>
+<rect x="85" y="135" width="125" height="60" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="93" y="170" font-size="14" font-weight="700" fill="#222" text-anchor="start">対象</text>
+<rect x="210" y="135" width="120" height="60" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="218" y="170" font-size="14" font-weight="700" fill="#222" text-anchor="start">項目</text>
+<rect x="330" y="135" width="105" height="60" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="338" y="170" font-size="14" font-weight="700" fill="#222" text-anchor="start">パターン</text>
+<rect x="435" y="135" width="95" height="60" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="443" y="170" font-size="14" font-weight="700" fill="#222" text-anchor="start">具体値</text>
+<rect x="530" y="135" width="325" height="30" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="692.5" y="155" font-size="14" font-weight="700" fill="#222" text-anchor="middle">試験項番</text>
+<rect x="530" y="165" width="65" height="30" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="562.5" y="185" font-size="14" font-weight="700" fill="#222" text-anchor="middle">001</text>
+<rect x="595" y="165" width="65" height="30" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="627.5" y="185" font-size="14" font-weight="700" fill="#222" text-anchor="middle">002</text>
+<rect x="660" y="165" width="65" height="30" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="692.5" y="185" font-size="14" font-weight="700" fill="#222" text-anchor="middle">003</text>
+<rect x="725" y="165" width="65" height="30" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="757.5" y="185" font-size="14" font-weight="700" fill="#222" text-anchor="middle">004</text>
+<rect x="790" y="165" width="65" height="30" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="822.5" y="185" font-size="14" font-weight="700" fill="#222" text-anchor="middle">005</text>
+<rect x="855" y="135" width="45" height="60" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="877.5" y="172" font-size="22" font-weight="400" fill="#222" text-anchor="middle">+</text>
+<rect x="30" y="195" width="55" height="35" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="38" y="217.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">入力</text>
+<rect x="85" y="195" width="125" height="35" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="93" y="217.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">ログインAPI</text>
+<rect x="210" y="195" width="120" height="35" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="218" y="217.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">リクエスト</text>
+<rect x="330" y="195" width="105" height="35" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="338" y="217.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">必須項目あり</text>
+<rect x="435" y="195" width="95" height="35" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="443" y="217.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">login()</text>
+<rect x="30" y="230" width="55" height="105" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="38" y="287.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">機能</text>
+<rect x="85" y="230" width="125" height="70" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="93" y="270" font-size="14" font-weight="400" fill="#222" text-anchor="start">会員確認</text>
+<rect x="210" y="230" width="120" height="70" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="218" y="270" font-size="14" font-weight="400" fill="#222" text-anchor="start">会員情報の検索</text>
+<rect x="330" y="230" width="105" height="35" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="338" y="252.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">見つかる</text>
+<rect x="435" y="230" width="95" height="35" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="443" y="252.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">true</text>
+<rect x="330" y="265" width="105" height="35" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="338" y="287.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">見つからない</text>
+<rect x="435" y="265" width="95" height="35" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="443" y="287.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">false</text>
+<rect x="85" y="300" width="125" height="35" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="93" y="322.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">状態確認</text>
+<rect x="210" y="300" width="120" height="35" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="218" y="322.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">アカウント状態</text>
+<rect x="330" y="300" width="105" height="35" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="338" y="322.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">ロック中</text>
+<rect x="435" y="300" width="95" height="35" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="443" y="322.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">locked</text>
+<rect x="30" y="335" width="55" height="35" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="38" y="357.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">出力</text>
+<rect x="85" y="335" width="125" height="35" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="93" y="357.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">レスポンス</text>
+<rect x="210" y="335" width="120" height="35" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="218" y="357.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">結果コード</text>
+<rect x="330" y="335" width="105" height="35" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="338" y="357.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">エラー</text>
+<rect x="435" y="335" width="95" height="35" rx="0" fill="none" stroke="#cfd4db" stroke-width="1"/>
+<text x="443" y="357.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">ERR</text>
+<rect x="530" y="195" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<circle cx="562.5" cy="212.5" r="7" fill="none" stroke="#333" stroke-width="1.3"/>
+<rect x="595" y="195" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<circle cx="627.5" cy="212.5" r="7" fill="none" stroke="#333" stroke-width="1.3"/>
+<rect x="660" y="195" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<circle cx="692.5" cy="212.5" r="7" fill="none" stroke="#333" stroke-width="1.3"/>
+<rect x="725" y="195" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<circle cx="757.5" cy="212.5" r="7" fill="none" stroke="#333" stroke-width="1.3"/>
+<rect x="790" y="195" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<circle cx="822.5" cy="212.5" r="7" fill="none" stroke="#333" stroke-width="1.3"/>
+<rect x="530" y="230" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<rect x="595" y="230" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<circle cx="627.5" cy="247.5" r="7" fill="none" stroke="#333" stroke-width="1.3"/>
+<rect x="660" y="230" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<circle cx="692.5" cy="247.5" r="7" fill="none" stroke="#333" stroke-width="1.3"/>
+<rect x="725" y="230" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<circle cx="757.5" cy="247.5" r="7" fill="none" stroke="#333" stroke-width="1.3"/>
+<rect x="790" y="230" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<circle cx="822.5" cy="247.5" r="7" fill="none" stroke="#333" stroke-width="1.3"/>
+<rect x="530" y="265" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<circle cx="562.5" cy="282.5" r="7" fill="none" stroke="#333" stroke-width="1.3"/>
+<rect x="595" y="265" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<rect x="660" y="265" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<rect x="725" y="265" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<rect x="790" y="265" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<rect x="530" y="300" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<path d="M557.5 317.5H567.5" stroke="#333" stroke-width="1.6"/>
+<rect x="595" y="300" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<circle cx="627.5" cy="317.5" r="7" fill="none" stroke="#333" stroke-width="1.3"/>
+<rect x="660" y="300" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<rect x="725" y="300" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<rect x="790" y="300" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<rect x="530" y="335" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<circle cx="562.5" cy="352.5" r="7" fill="none" stroke="#333" stroke-width="1.3"/>
+<rect x="595" y="335" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<circle cx="627.5" cy="352.5" r="7" fill="none" stroke="#333" stroke-width="1.3"/>
+<rect x="660" y="335" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<circle cx="692.5" cy="352.5" r="7" fill="none" stroke="#333" stroke-width="1.3"/>
+<rect x="725" y="335" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<circle cx="757.5" cy="352.5" r="7" fill="none" stroke="#333" stroke-width="1.3"/>
+<rect x="790" y="335" width="65" height="35" rx="0" fill="#fff" stroke="#cfd4db" stroke-width="1"/>
+<circle cx="822.5" cy="352.5" r="7" fill="none" stroke="#333" stroke-width="1.3"/>
+<path d="M530 135V370" stroke="#8a9099" stroke-width="2.5"/>
+<circle cx="530" cy="121" r="10" fill="#fff" stroke="#2b6fd6" stroke-width="2"/>
+<path d="M524.5 121H535.5M530 115.5V126.5" stroke="#222" stroke-width="1.6"/>
+<path d="M30 300H855" stroke="#2b6fd6" stroke-width="2" stroke-dasharray="7 5"/>
+<circle cx="877" cy="300" r="12" fill="#fff" stroke="#2b6fd6" stroke-width="2"/>
+<path d="M870.4 300H883.6M877 293.4V306.6" stroke="#222" stroke-width="1.6"/>
+<rect x="596" y="301" width="63" height="33" rx="0" fill="none" stroke="#2b6fd6" stroke-width="2.5"/>
+<path d="M647 335V380" stroke="#2b6fd6" stroke-width="1.5"/>
+<rect x="595" y="380" width="120" height="92" rx="7" fill="#eef3fc" stroke="#2b6fd6" stroke-width="1.8"/>
+<circle cx="612" cy="400" r="7" fill="none" stroke="#333" stroke-width="1.3"/>
+<text x="625" y="405" font-size="14" font-weight="400" fill="#222" text-anchor="start">確認する</text>
+<path d="M607 427H617" stroke="#333" stroke-width="1.6"/>
+<text x="625" y="432" font-size="14" font-weight="400" fill="#222" text-anchor="start">到達しない</text>
+<text x="607" y="459" font-size="14" font-weight="400" fill="#222" text-anchor="start">空欄 該当なし</text>
+<text x="30" y="402" font-size="14" font-weight="400" fill="#666" text-anchor="start">① 色付きの左側の列と見出し行は固定表示</text>
+<text x="30" y="429" font-size="14" font-weight="400" fill="#666" text-anchor="start">② 行の間にマウスを乗せると＋で行を挿入</text>
+<text x="30" y="456" font-size="14" font-weight="400" fill="#666" text-anchor="start">③ 右上の＋で試験の列、境目の＋で階層の列を追加</text>
+<text x="30" y="483" font-size="14" font-weight="400" fill="#666" text-anchor="start">④ クリックしたセルにだけプルダウンを表示</text>
+</svg>
