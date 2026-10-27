@@ -43,22 +43,30 @@ test('セルの文字はHTMLとして解釈しない', () => {
   assert.ok(buildHtml(m).includes('&lt;b&gt;&amp;&quot;'));
 });
 
-test('網羅チェック：○ が無い行と試験の列に印を付ける', () => {
-  const html = buildHtml(marked(), { uncoveredRows: new Set([4]), uncoveredTests: new Set([2]) });
-  assert.match(html, /<tr data-row="4" class="uncovered">/);
-  assert.match(html, /<th class="test-no uncovered" data-test="2">003<\/th>/);
+test('網羅チェック：○ が無い行と試験の列に印と説明を付ける', () => {
+  const html = buildHtml(marked(), { uncoveredRows: new Set([3]), uncoveredTests: new Set([2]) });
+  assert.match(html, /<tr data-row="3" class="uncovered">/);
+  assert.match(html, /<td class="left value" [^>]*title="網羅チェック：この条件には、どの試験にも○が付いていません">locked<\/td>/);
+  assert.match(html, /<th class="test-no uncovered" data-test="2" title="網羅チェック：この試験には、入力・機能の条件に○が1つもありません">003<\/th>/);
+  assert.doesNotMatch(html, /<th class="test-no" data-test="0" title=/, '色の付かないセルには説明を付けない');
 });
 
-test('警告：セル単位と行単位で色を付ける', () => {
+test('警告：セル単位と行単位で色と説明を付ける', () => {
   const warnings = [
     { code: 'W1', cells: [{ row: 0, col: 5 }] }, // 1行目の 001 の列（階層4列＋具体値1列の右）
     { code: 'W5', cells: [{ row: 2, col: null }] },
   ];
   const highlights = highlightsFromWarnings(warnings);
-  assert.deepEqual([...highlights.warnCells], ['0:5']);
-  assert.deepEqual([...highlights.warnRows], [2]);
+  assert.deepEqual([...highlights.warnCells.keys()], ['0:5']);
+  assert.deepEqual([...highlights.warnRows.keys()], [2]);
 
   const html = buildHtml(marked(), highlights);
-  assert.match(html, /<td class="mark warn" data-test="0">○<\/td>/);
+  assert.match(html, /<td class="mark warn" data-test="0" title="警告：○・−・空欄のどれにも当てはまらない文字です">○<\/td>/);
   assert.match(html, /<tr data-row="2" class="warn-row">/);
+  assert.match(html, /<td class="left value" [^>]*title="警告：読み込む前の条件から、書き換えられた（または追加された）行です">false<\/td>/);
+});
+
+test('警告：説明が用意されていない警告は、警告の文章をそのまま使う', () => {
+  const highlights = highlightsFromWarnings([{ code: 'W9', message: '新しい警告', cells: [{ row: 0, col: 5 }] }]);
+  assert.equal(highlights.warnCells.get('0:5'), '警告：新しい警告');
 });

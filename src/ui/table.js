@@ -9,23 +9,37 @@ const TableView = (() => {
   const LEVEL_WIDTH = 120;
   const VALUE_WIDTH = 110;
 
+  // 色を付けたセルにマウスを乗せたときの説明
+  const TIPS = {
+    uncoveredRow: '網羅チェック：この条件には、どの試験にも○が付いていません',
+    uncoveredTest: '網羅チェック：この試験には、入力・機能の条件に○が1つもありません',
+    W1: '警告：○・−・空欄のどれにも当てはまらない文字です',
+    W2: '警告：AIの表で列が足りなかったため、空欄で補った行です',
+    W5: '警告：読み込む前の条件から、書き換えられた（または追加された）行です',
+  };
+
   const escape = (text) =>
     String(text).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
 
   // 表の列番号（col）：階層の列 0〜L-1、具体値の列 L、試験の列 L+1〜（書式仕様書の警告のセル位置と同じ）
   //
   // highlights（どれも省略可）：
-  //   warnCells       … 色を付けるセル。"行:列" の Set（W1 など）
-  //   warnRows        … 左側の条件に色を付ける行の Set（W2・W5 など）
+  //   warnCells       … 色を付けるセル。"行:列" → 説明 の Map（W1 など）
+  //   warnRows        … 左側の条件に色を付ける行。行 → 説明 の Map（W2・W5 など）
   //   uncoveredRows   … ○ が1つも無い行の Set（網羅チェック）
   //   uncoveredTests  … ○ が1つも無い試験の列の Set（網羅チェック）
+  // 色を付けたセルには、マウスを乗せると理由が出るよう title を付ける
   function buildHtml(matrix, highlights = {}) {
-    const { warnCells = new Set(), warnRows = new Set(), uncoveredRows = new Set(), uncoveredTests = new Set() } = highlights;
+    const { warnCells = new Map(), warnRows = new Map(), uncoveredRows = new Set(), uncoveredTests = new Set() } = highlights;
     const levelCount = matrix.headers.length;
     const testCount = matrix.testCount;
     const spans = checks.mergeSpans(matrix);
     const numbers = format.testNumbers(testCount);
     const leftStyle = (c, width) => `style="min-width:${width}px;max-width:${width}px"`;
+    const title = (...tips) => {
+      const text = tips.filter(Boolean).join('\n');
+      return text ? ` title="${escape(text)}"` : '';
+    };
 
     const out = [];
     out.push('<table class="matrix"><thead><tr class="head-1">');
@@ -41,26 +55,28 @@ const TableView = (() => {
     out.push('</tr><tr class="head-2">');
     if (testCount === 0) out.push('<th class="test-no empty">なし</th>');
     numbers.forEach((no, t) => {
-      const cls = uncoveredTests.has(t) ? ' uncovered' : '';
-      out.push(`<th class="test-no${cls}" data-test="${t}">${no}</th>`);
+      const uncovered = uncoveredTests.has(t);
+      out.push(`<th class="test-no${uncovered ? ' uncovered' : ''}" data-test="${t}"${title(uncovered && TIPS.uncoveredTest)}>${no}</th>`);
     });
     out.push('</tr></thead><tbody>');
 
     matrix.rows.forEach((row, r) => {
       const rowCls = [warnRows.has(r) && 'warn-row', uncoveredRows.has(r) && 'uncovered'].filter(Boolean).join(' ');
       out.push(`<tr data-row="${r}"${rowCls ? ` class="${rowCls}"` : ''}>`);
+      const rowTip = warnRows.get(r);
       row.levels.forEach((text, c) => {
         if (spans[c][r] === 0) return; // 上のセルに結合されている
         const span = spans[c][r] > 1 ? ` rowspan="${spans[c][r]}"` : '';
-        const warn = warnCells.has(`${r}:${c}`) ? ' warn' : '';
-        out.push(`<td class="left level${warn}"${span} data-col="${c}" ${leftStyle(c, LEVEL_WIDTH)}>${escape(text)}</td>`);
+        const cellTip = warnCells.get(`${r}:${c}`);
+        out.push(`<td class="left level${cellTip ? ' warn' : ''}"${span} data-col="${c}" ${leftStyle(c, LEVEL_WIDTH)}${title(cellTip, rowTip)}>${escape(text)}</td>`);
       });
-      const valueWarn = warnCells.has(`${r}:${levelCount}`) ? ' warn' : '';
-      out.push(`<td class="left value${valueWarn}" data-col="${levelCount}" ${leftStyle(levelCount, VALUE_WIDTH)}>${escape(row.value)}</td>`);
+      const valueTip = warnCells.get(`${r}:${levelCount}`);
+      const valueTitle = title(valueTip, rowTip, uncoveredRows.has(r) && TIPS.uncoveredRow);
+      out.push(`<td class="left value${valueTip ? ' warn' : ''}" data-col="${levelCount}" ${leftStyle(levelCount, VALUE_WIDTH)}${valueTitle}>${escape(row.value)}</td>`);
       if (testCount === 0) out.push('<td class="mark empty"></td>');
       row.marks.forEach((mark, t) => {
-        const warn = warnCells.has(`${r}:${levelCount + 1 + t}`) ? ' warn' : '';
-        out.push(`<td class="mark${warn}" data-test="${t}">${escape(mark)}</td>`);
+        const cellTip = warnCells.get(`${r}:${levelCount + 1 + t}`);
+        out.push(`<td class="mark${cellTip ? ' warn' : ''}" data-test="${t}"${title(cellTip)}>${escape(mark)}</td>`);
       });
       out.push('</tr>');
     });
@@ -71,12 +87,14 @@ const TableView = (() => {
 
   // 書式仕様書の警告（cells の row・col）を、buildHtml の highlights に変換する
   function highlightsFromWarnings(warnings) {
-    const warnCells = new Set();
-    const warnRows = new Set();
+    const warnCells = new Map();
+    const warnRows = new Map();
+    const add = (map, key, tip) => map.set(key, map.has(key) ? `${map.get(key)}\n${tip}` : tip);
     for (const w of warnings) {
+      const tip = TIPS[w.code] || `警告：${w.message}`;
       for (const { row, col } of w.cells || []) {
-        if (col === null) warnRows.add(row);
-        else warnCells.add(`${row}:${col}`);
+        if (col === null) add(warnRows, row, tip);
+        else add(warnCells, `${row}:${col}`, tip);
       }
     }
     return { warnCells, warnRows };

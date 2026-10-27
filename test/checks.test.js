@@ -63,6 +63,11 @@ test('網羅チェック：出力の行にだけ ○ がある試験の列は、
   assert.deepEqual(coverage(m).tests, [1]);
 });
 
+test('網羅チェック：条件が空の行（「種類」だけの行）は対象外', () => {
+  const m = Matrix.insertTest(Matrix.createDefault(), 0);
+  assert.deepEqual(coverage(m), { rows: [], tests: [0] });
+});
+
 test('網羅チェック：試験の列がまだ無いうちは調べない', () => {
   assert.deepEqual(coverage(loginMatrix()), { rows: [], tests: [] });
 });

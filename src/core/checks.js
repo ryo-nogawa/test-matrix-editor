@@ -75,17 +75,19 @@ const Checks = (() => {
 
   // ---------- 網羅チェック ----------
 
-  // 「種類」が出力（結果）の行。期待値は参考資料が無いと空欄で返るため、網羅チェックの対象から外す
-  const isOutputRow = (row) => row.levels[0].startsWith('出力');
+  // 網羅チェックの対象の行。次の行は外す
+  //   - 「種類」が出力（結果）の行：期待値は参考資料が無いと空欄で返るため
+  //   - 条件が空の行（「種類」だけの行）：条件が無い行に ○ を求めても意味が無いため
+  const isTarget = (row) => !row.levels[0].startsWith('出力') && hasCondition(row);
 
-  // ○ が1つも無い行と、○ が1つも無い試験の列の番号（0始まり）を返す。出力の行は数えない
+  // ○ が1つも無い行と、○ が1つも無い試験の列の番号（0始まり）を返す。対象外の行は数えない
   function coverage(matrix) {
     if (matrix.testCount === 0) return { rows: [], tests: [] }; // 試験がまだ無いうちは調べない
     const has = (m) => m === marks.CIRCLE;
-    const targets = matrix.rows.filter((row) => !isOutputRow(row));
+    const targets = matrix.rows.filter(isTarget);
     const rows = [];
     matrix.rows.forEach((row, r) => {
-      if (!isOutputRow(row) && !row.marks.some(has)) rows.push(r);
+      if (isTarget(row) && !row.marks.some(has)) rows.push(r);
     });
     const tests = [];
     for (let t = 0; t < matrix.testCount; t++) {

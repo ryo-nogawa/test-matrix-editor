@@ -36,16 +36,23 @@ const App = (() => {
     });
     buttons.undo.disabled = !History.canUndo(history);
     buttons.redo.disabled = !History.canRedo(history);
-    renderStatus();
+    renderStatus(coverage);
   }
 
-  function renderStatus() {
+  function renderStatus(coverage) {
     const { matrix } = history.present;
     const time = savedAt && savedAt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     status.textContent = [
       `条件 ${matrix.rows.length}行・試験 ${matrix.testCount}列`,
+      coverageText(matrix, coverage),
       savedAt ? `ブラウザ内に保存しました（${time}）` : 'ブラウザ内に保存できません。Markdown出力でバックアップしてください',
     ].join('　｜　');
+  }
+
+  function coverageText(matrix, { rows, tests }) {
+    if (matrix.testCount === 0) return '網羅チェック：試験の列を追加すると確認します';
+    if (rows.length === 0 && tests.length === 0) return '網羅チェック：問題なし';
+    return `網羅チェック：○が無い条件 ${rows.length}行・試験 ${tests.length}列`;
   }
 
   // 変更のたびにブラウザ内へ保存する
