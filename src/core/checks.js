@@ -80,6 +80,7 @@ const Checks = (() => {
 
   // ○ が1つも無い行と、○ が1つも無い試験の列の番号（0始まり）を返す。出力の行は数えない
   function coverage(matrix) {
+    if (matrix.testCount === 0) return { rows: [], tests: [] }; // 試験がまだ無いうちは調べない
     const has = (m) => m === marks.CIRCLE;
     const targets = matrix.rows.filter((row) => !isOutputRow(row));
     const rows = [];

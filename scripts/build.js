@@ -16,6 +16,7 @@ const SCRIPTS = [
   'core/checks.js',
   'core/history.js',
   'ui/table.js',
+  'ui/editing.js',
   'app.js',
 ];
 

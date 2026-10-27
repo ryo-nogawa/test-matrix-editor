@@ -93,6 +93,11 @@ test('見出し名の変更', () => {
 
 // ---------- セル ----------
 
+test('結合したセルの編集：結合している行をまとめて書き換える', () => {
+  const m = M.setLevelRange(base(), 1, 3, 0, '処理');
+  assert.deepEqual(m.rows.map((r) => r.levels[0]), ['入力', '処理', '処理', '処理', '出力']);
+});
+
 test('セルの編集：変えた行以外は元のデータを共有する', () => {
   const before = base();
   const m = M.setMark(M.setValue(M.setLevel(before, 1, 3, '一致'), 1, 'yes'), 1, 0, '○');

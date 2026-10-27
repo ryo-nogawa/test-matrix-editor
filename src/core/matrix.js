@@ -123,6 +123,13 @@ const Matrix = (() => {
     return updateRow(matrix, rowIndex, (row) => ({ ...row, levels: row.levels.map((v, i) => (i === levelIndex ? text : v)) }));
   }
 
+  // 結合して表示しているセルの編集。結合している行（start から count 行）をまとめて書き換える
+  function setLevelRange(matrix, start, count, levelIndex, text) {
+    let next = matrix;
+    for (let r = start; r < start + count; r++) next = setLevel(next, r, levelIndex, text);
+    return next;
+  }
+
   function setValue(matrix, rowIndex, text) {
     return updateRow(matrix, rowIndex, (row) => ({ ...row, value: text }));
   }
@@ -136,7 +143,7 @@ const Matrix = (() => {
     insertRow, deleteRow,
     insertTest, duplicateTest, deleteTest,
     addLevel, deleteLevel, renameLevel, renameValueHeader,
-    setLevel, setValue, setMark,
+    setLevel, setLevelRange, setValue, setMark,
   };
 })();
 

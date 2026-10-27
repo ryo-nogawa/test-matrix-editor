@@ -11,9 +11,16 @@ const cellTag = (html, text) => html.match(new RegExp(`<t[hd][^>]*>${text}</t[hd
 
 test('見出し：左側の見出しと、試験項番のまとめ見出し・項番', () => {
   const html = buildHtml(marked());
-  assert.match(cellTag(html, '種類'), /rowspan="2"/);
+  assert.match(html, /<th class="left level" rowspan="2" data-col="0"[^>]*><span class="text">種類<\/span><\/th>/);
   assert.match(cellTag(html, '試験項番'), /colspan="3"/);
   assert.ok(['001', '002', '003'].every((no) => cellTag(html, no)));
+});
+
+test('＋ボタン：階層の列の右端の見出しと、試験の列の右端', () => {
+  const html = buildHtml(marked());
+  assert.match(html, /<th class="left level last-level" [^>]*data-col="3"[^>]*><span class="text">パターン<\/span><button [^>]*class="add-level"/);
+  assert.equal((html.match(/class="add-level"/g) || []).length, 1);
+  assert.match(html, /<th class="add-test" rowspan="2"[^>]*>\+<\/th>/);
 });
 
 test('階層の列：同じ値が続くセルを結合する', () => {

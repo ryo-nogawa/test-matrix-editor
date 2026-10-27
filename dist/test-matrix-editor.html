@@ -14,6 +14,7 @@
   --warn-bg: #ffe3b3;
   --uncovered-bg: #fde0e0;
   --uncovered-text: #b3261e;
+  --accent: #2b6fd6;
 }
 
 * {
@@ -83,6 +84,11 @@ body {
   overflow-wrap: anywhere;
 }
 
+/* 空の行もつぶれないように、行の高さの最小値を決める */
+.matrix td {
+  height: 34px;
+}
+
 .matrix thead th {
   position: sticky;
   top: 0;
@@ -143,6 +149,136 @@ body {
 .matrix th.test-no.uncovered {
   background: var(--uncovered-bg);
   color: var(--uncovered-text);
+}
+
+/* ---------- 編集操作 ---------- */
+
+.matrix .left,
+.matrix .mark {
+  cursor: pointer;
+}
+
+.matrix .left:hover,
+.matrix .mark:hover {
+  outline: 1px solid #9bb8e8;
+  outline-offset: -1px;
+}
+
+/* クリック・右クリックしたセル */
+.matrix .selected {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* その場で編集する入力欄 */
+.cell-input {
+  width: 100%;
+  padding: 2px 4px;
+  border: 1px solid var(--accent);
+  font: inherit;
+}
+
+/* 階層の列を追加する＋（階層の列の右端の見出し） */
+/* ＋が右隣の「具体値」の見出しに隠れないよう、右端の階層の見出しを手前に出す */
+.matrix thead th.last-level {
+  z-index: 4;
+}
+
+.matrix .add-level {
+  position: absolute;
+  top: 50%;
+  right: -11px;
+  z-index: 4;
+  transform: translateY(-50%);
+}
+
+/* 試験の列を右端に追加する＋ */
+.matrix th.add-test {
+  min-width: 36px;
+  color: #444;
+  font-size: 18px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.matrix th.test-no.empty {
+  cursor: pointer;
+}
+
+.matrix .add-level,
+.insert-plus {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: #fff;
+  color: #222;
+  font: 700 14px/1 sans-serif;
+  cursor: pointer;
+}
+
+/* 行・列の間に出す破線と＋ */
+.insert-line {
+  position: fixed;
+  z-index: 10;
+  border-top: 2px dashed var(--accent);
+  pointer-events: none;
+}
+
+.insert-line.vertical {
+  border-top: none;
+  border-left: 2px dashed var(--accent);
+}
+
+.insert-plus {
+  position: fixed;
+  z-index: 11;
+  transform: translate(-50%, -50%);
+}
+
+/* 印のプルダウンと右クリックメニュー */
+.popup {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  padding: 4px;
+  border: 1.5px solid var(--accent);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+}
+
+.popup[hidden] {
+  display: none;
+}
+
+.popup button {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.popup button:hover:not(:disabled) {
+  background: #eef3fc;
+}
+
+.popup button:disabled {
+  color: #aaa;
+  cursor: default;
+}
+
+.popup hr {
+  width: 100%;
+  margin: 4px 0;
+  border: none;
+  border-top: 1px solid var(--line);
 }
 
 /* ---------- ステータス ---------- */
@@ -487,6 +623,13 @@ const Matrix = (() => {
     return updateRow(matrix, rowIndex, (row) => ({ ...row, levels: row.levels.map((v, i) => (i === levelIndex ? text : v)) }));
   }
 
+  // 結合して表示しているセルの編集。結合している行（start から count 行）をまとめて書き換える
+  function setLevelRange(matrix, start, count, levelIndex, text) {
+    let next = matrix;
+    for (let r = start; r < start + count; r++) next = setLevel(next, r, levelIndex, text);
+    return next;
+  }
+
   function setValue(matrix, rowIndex, text) {
     return updateRow(matrix, rowIndex, (row) => ({ ...row, value: text }));
   }
@@ -500,7 +643,7 @@ const Matrix = (() => {
     insertRow, deleteRow,
     insertTest, duplicateTest, deleteTest,
     addLevel, deleteLevel, renameLevel, renameValueHeader,
-    setLevel, setValue, setMark,
+    setLevel, setLevelRange, setValue, setMark,
   };
 })();
 
@@ -589,6 +732,7 @@ const Checks = (() => {
 
   // ○ が1つも無い行と、○ が1つも無い試験の列の番号（0始まり）を返す。出力の行は数えない
   function coverage(matrix) {
+    if (matrix.testCount === 0) return { rows: [], tests: [] }; // 試験がまだ無いうちは調べない
     const has = (m) => m === marks.CIRCLE;
     const targets = matrix.rows.filter((row) => !isOutputRow(row));
     const rows = [];
@@ -719,10 +863,14 @@ const TableView = (() => {
     const out = [];
     out.push('<table class="matrix"><thead><tr class="head-1">');
     matrix.headers.forEach((h, c) => {
-      out.push(`<th class="left level" rowspan="2" data-col="${c}" ${leftStyle(c, LEVEL_WIDTH)}>${escape(h)}</th>`);
+      // 階層の列の右端の見出しに、階層の列を追加する＋を付ける
+      const isLast = c === levelCount - 1;
+      const addLevel = isLast ? '<button type="button" class="add-level" title="階層の列を追加">+</button>' : '';
+      out.push(`<th class="left level${isLast ? ' last-level' : ''}" rowspan="2" data-col="${c}" ${leftStyle(c, LEVEL_WIDTH)}><span class="text">${escape(h)}</span>${addLevel}</th>`);
     });
     out.push(`<th class="left value" rowspan="2" data-col="${levelCount}" ${leftStyle(levelCount, VALUE_WIDTH)}>${escape(matrix.valueHeader)}</th>`);
     out.push(`<th class="test-group" colspan="${Math.max(testCount, 1)}">試験項番</th>`);
+    out.push('<th class="add-test" rowspan="2" title="試験の列を右端に追加">+</th>');
     out.push('</tr><tr class="head-2">');
     if (testCount === 0) out.push('<th class="test-no empty">なし</th>');
     numbers.forEach((no, t) => {
@@ -790,27 +938,366 @@ const TableView = (() => {
 
 if (typeof module !== 'undefined') module.exports = TableView;
 
+// ---- ui/editing.js ----
+// 表の編集操作（要件定義書 5.10）
+//   - セルや見出しをクリックすると、その場で編集する
+//   - 印のセルをクリックすると、そのセルにだけプルダウン（○ / − / 空欄）を出す
+//   - 行・列の間にマウスを乗せると、破線と＋を出して挿入できる
+//   - 右クリックで「挿入・複製・削除」のメニューを出す
+//   - Ctrl+Z で元に戻し、Ctrl+Y（Ctrl+Shift+Z）でやり直す
+//
+// データの変更はすべて update(関数) を通して行い、app.js が履歴に積んで描き直す
+const Editing = (() => {
+  const EDGE = 6; // 行・列の境目とみなす範囲（px）
+
+  const MARK_OPTIONS = [
+    { mark: Marks.CIRCLE, label: '○ 確認する' },
+    { mark: Marks.DASH, label: '− 到達しない' },
+    { mark: Marks.BLANK, label: '空欄 該当なし' },
+  ];
+
+  function attach({ container, getMatrix, update, undo, redo, refresh }) {
+    let editing = false;
+    let insertAt = null; // { kind: 'row' | 'test', index }
+
+    // ---------- 画面の上に重ねる部品 ----------
+
+    const line = element('div', 'insert-line');
+    const plus = element('button', 'insert-plus', '+');
+    const popup = element('div', 'popup');
+    plus.type = 'button';
+    document.body.append(line, plus, popup);
+
+    function element(tag, className, text = '') {
+      const el = document.createElement(tag);
+      el.className = className;
+      el.textContent = text;
+      el.hidden = true;
+      return el;
+    }
+
+    function hideInsert() {
+      line.hidden = true;
+      plus.hidden = true;
+      insertAt = null;
+    }
+
+    function hidePopup() {
+      popup.hidden = true;
+      container.querySelectorAll('.selected').forEach((el) => el.classList.remove('selected'));
+    }
+
+    // items：[{ label, action, disabled }] または '-'（区切り線）
+    function showPopup(items, x, y) {
+      popup.innerHTML = '';
+      for (const item of items) {
+        if (item === '-') {
+          popup.append(Object.assign(document.createElement('hr')));
+          continue;
+        }
+        const button = Object.assign(document.createElement('button'), { type: 'button', textContent: item.label, disabled: !!item.disabled });
+        button.addEventListener('click', () => {
+          hidePopup();
+          item.action();
+        });
+        popup.append(button);
+      }
+      popup.hidden = false;
+      // 画面の外にはみ出さないように位置を調整する
+      const { width, height } = popup.getBoundingClientRect();
+      popup.style.left = `${Math.min(x, window.innerWidth - width - 8)}px`;
+      popup.style.top = `${Math.min(y, window.innerHeight - height - 8)}px`;
+    }
+
+    // ---------- 行・列の間の挿入 ----------
+
+    function onMouseMove(e) {
+      if (editing || !popup.hidden) return;
+      const cell = e.target.closest('td, th.test-no');
+      if (!cell || !container.contains(cell)) return hideInsert();
+      const rect = cell.getBoundingClientRect();
+      const box = visibleBox();
+
+      // 行の境目（td の上端・下端）
+      if (cell.tagName === 'TD') {
+        const row = Number(cell.closest('tr').dataset.row);
+        const nearTop = e.clientY - rect.top < EDGE;
+        const nearBottom = rect.bottom - e.clientY < EDGE;
+        if (nearTop || nearBottom) {
+          const index = nearTop ? row : row + cell.rowSpan;
+          const y = nearTop ? rect.top : rect.bottom;
+          return showInsert({ kind: 'row', index }, box.left, y - 1, box.right - box.left, 2, box.right - 14, y);
+        }
+      }
+      // 試験の列の境目（印のセル・項番の見出しの左端・右端）
+      if (cell.dataset.test !== undefined) {
+        const test = Number(cell.dataset.test);
+        const nearLeft = e.clientX - rect.left < EDGE;
+        const nearRight = rect.right - e.clientX < EDGE;
+        if (nearLeft || nearRight) {
+          const x = nearLeft ? rect.left : rect.right;
+          return showInsert({ kind: 'test', index: nearLeft ? test : test + 1 }, x - 1, box.top, 2, box.bottom - box.top, x, box.top + 14);
+        }
+      }
+      hideInsert();
+    }
+
+    // 表のうち、いま画面に見えている範囲
+    function visibleBox() {
+      const c = container.getBoundingClientRect();
+      const t = container.querySelector('table').getBoundingClientRect();
+      return { left: c.left, right: Math.min(c.right, t.right), top: t.top < c.top ? c.top : t.top, bottom: Math.min(c.bottom, t.bottom) };
+    }
+
+    function showInsert(target, lineX, lineY, lineW, lineH, plusX, plusY) {
+      insertAt = target;
+      Object.assign(line.style, { left: `${lineX}px`, top: `${lineY}px`, width: `${lineW}px`, height: `${lineH}px` });
+      line.classList.toggle('vertical', target.kind === 'test');
+      Object.assign(plus.style, { left: `${plusX}px`, top: `${plusY}px` });
+      plus.title = target.kind === 'row' ? 'ここに行を挿入' : 'ここに試験の列を挿入';
+      line.hidden = false;
+      plus.hidden = false;
+    }
+
+    plus.addEventListener('click', () => {
+      const target = insertAt;
+      hideInsert();
+      if (target?.kind === 'row') update((m) => Matrix.insertRow(m, target.index));
+      if (target?.kind === 'test') update((m) => Matrix.insertTest(m, target.index));
+    });
+
+    // ＋ボタンに移るときは、表から出ても＋を消さない
+    container.addEventListener('mouseleave', (e) => {
+      if (e.relatedTarget !== plus) hideInsert();
+    });
+    plus.addEventListener('mouseleave', (e) => {
+      if (!container.contains(e.relatedTarget)) hideInsert();
+    });
+
+    // ---------- クリック ----------
+
+    function onClick(e) {
+      if (editing) return;
+      const target = e.target;
+      if (target.closest('.add-level')) return update((m) => Matrix.addLevel(m));
+      if (target.closest('.add-test')) return update((m) => Matrix.insertTest(m, m.testCount));
+      if (target.closest('th.test-no.empty')) return update((m) => Matrix.insertTest(m, 0));
+
+      const mark = target.closest('td.mark[data-test]');
+      if (mark) return openMarkMenu(mark);
+
+      const left = target.closest('.left');
+      if (left) startEdit(left);
+    }
+
+    function openMarkMenu(cell) {
+      hideInsert();
+      hidePopup();
+      const row = Number(cell.closest('tr').dataset.row);
+      const test = Number(cell.dataset.test);
+      cell.classList.add('selected');
+      const rect = cell.getBoundingClientRect();
+      showPopup(
+        MARK_OPTIONS.map(({ mark, label }) => ({ label, action: () => update((m) => Matrix.setMark(m, row, test, mark)) })),
+        rect.left,
+        rect.bottom + 2,
+      );
+    }
+
+    // ---------- その場での編集 ----------
+
+    // セルが表すデータ（どの値を、どう書き換えるか）
+    function editTarget(cell) {
+      const m = getMatrix();
+      const col = Number(cell.dataset.col);
+      const isValue = col === m.headers.length;
+      if (cell.tagName === 'TH') {
+        return isValue
+          ? { text: m.valueHeader, apply: (t) => (x) => Matrix.renameValueHeader(x, t) }
+          : { text: m.headers[col], apply: (t) => (x) => Matrix.renameLevel(x, col, t) };
+      }
+      const row = Number(cell.closest('tr').dataset.row);
+      return isValue
+        ? { text: m.rows[row].value, apply: (t) => (x) => Matrix.setValue(x, row, t) }
+        : { text: m.rows[row].levels[col], apply: (t) => (x) => Matrix.setLevelRange(x, row, cell.rowSpan, col, t) };
+    }
+
+    function startEdit(cell) {
+      hideInsert();
+      hidePopup();
+      const target = editTarget(cell);
+      const input = Object.assign(document.createElement('input'), { type: 'text', value: target.text, className: 'cell-input' });
+      cell.replaceChildren(input);
+      editing = true;
+      input.focus();
+      input.select();
+
+      let done = false;
+      const finish = (save) => {
+        if (done) return;
+        done = true;
+        editing = false;
+        // セル内の改行は使えない（書式仕様書 4.4）
+        const text = input.value.replace(/[\r\n]+/g, ' ').trim();
+        if (save && text !== target.text) update(target.apply(text));
+        else refresh();
+      };
+      input.addEventListener('keydown', (e) => {
+        if (e.isComposing) return; // 日本語の変換を確定する Enter は無視する
+        if (e.key === 'Enter') finish(true);
+        if (e.key === 'Escape') finish(false);
+      });
+      input.addEventListener('blur', () => finish(true));
+    }
+
+    // ---------- 右クリックメニュー ----------
+
+    function onContextMenu(e) {
+      if (editing) return;
+      const cell = e.target.closest('td, th');
+      if (!cell || !container.contains(cell)) return;
+      const items = menuItems(cell);
+      if (!items) return;
+      e.preventDefault();
+      hideInsert();
+      hidePopup();
+      cell.classList.add('selected');
+      showPopup(items, e.clientX, e.clientY);
+    }
+
+    function menuItems(cell) {
+      const m = getMatrix();
+      if (cell.dataset.test !== undefined) {
+        const t = Number(cell.dataset.test);
+        return [
+          { label: '左に試験の列を挿入', action: () => update((x) => Matrix.insertTest(x, t)) },
+          { label: '右に試験の列を挿入', action: () => update((x) => Matrix.insertTest(x, t + 1)) },
+          { label: 'この試験の列を複製', action: () => update((x) => Matrix.duplicateTest(x, t)) },
+          '-',
+          { label: 'この試験の列を削除', action: () => update((x) => Matrix.deleteTest(x, t)) },
+        ];
+      }
+      if (cell.tagName === 'TH' && cell.classList.contains('level')) {
+        const c = Number(cell.dataset.col);
+        return [
+          { label: '階層の列を右端に追加', action: () => update((x) => Matrix.addLevel(x)) },
+          '-',
+          { label: 'この階層の列を削除', disabled: m.headers.length <= 1, action: () => update((x) => Matrix.deleteLevel(x, c)) },
+        ];
+      }
+      if (cell.tagName === 'TD' && cell.classList.contains('left')) {
+        const r = Number(cell.closest('tr').dataset.row);
+        return [
+          { label: '上に行を挿入', action: () => update((x) => Matrix.insertRow(x, r)) },
+          { label: '下に行を挿入', action: () => update((x) => Matrix.insertRow(x, r + 1)) },
+          '-',
+          { label: 'この行を削除', action: () => update((x) => Matrix.deleteRow(x, r)) },
+        ];
+      }
+      return null;
+    }
+
+    // ---------- キーボード ----------
+
+    function onKeyDown(e) {
+      if (e.key === 'Escape') {
+        hidePopup();
+        hideInsert();
+        return;
+      }
+      if (editing || e.target.closest?.('input, textarea')) return; // 入力欄の中では、入力欄の元に戻すを使う
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (!ctrl) return;
+      const key = e.key.toLowerCase();
+      if (key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
+        e.preventDefault();
+        redo();
+      }
+    }
+
+    container.addEventListener('mousemove', onMouseMove);
+    container.addEventListener('click', onClick);
+    container.addEventListener('contextmenu', onContextMenu);
+    container.addEventListener('scroll', () => {
+      hideInsert();
+      hidePopup();
+    });
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('mousedown', (e) => {
+      if (!popup.hidden && !popup.contains(e.target)) hidePopup();
+    });
+
+    // 描き直したときは、表の上に出していた部品を消す
+    return {
+      reset() {
+        hideInsert();
+        hidePopup();
+      },
+    };
+  }
+
+  return { attach };
+})();
+
 // ---- app.js ----
 // 画面の起動処理。各モジュールを組み合わせて画面を動かす
 const App = (() => {
   const container = document.getElementById('app');
   const status = document.getElementById('status');
+  const buttons = {
+    undo: document.querySelector('[data-action="undo"]'),
+    redo: document.querySelector('[data-action="redo"]'),
+  };
 
-  let history = History.create(Matrix.createDefault());
-  let warnings = []; // 直前の読み込みで出た警告。セルの強調表示に使う
+  // 履歴には、データと「そのデータを読み込んだときの警告」を組にして積む。
+  // 読み込んだ直後の状態に戻したときは、警告の強調表示も元に戻る
+  let history = History.create({ matrix: Matrix.createDefault(), warnings: [] });
+
+  const editing = Editing.attach({
+    container,
+    getMatrix: () => history.present.matrix,
+    update,
+    undo,
+    redo,
+    refresh: render,
+  });
 
   function render() {
-    const matrix = history.present;
+    const { matrix, warnings } = history.present;
     const coverage = Checks.coverage(matrix);
+    editing.reset();
     TableView.render(container, matrix, {
       ...TableView.highlightsFromWarnings(warnings),
       uncoveredRows: new Set(coverage.rows),
       uncoveredTests: new Set(coverage.tests),
     });
+    buttons.undo.disabled = !History.canUndo(history);
+    buttons.redo.disabled = !History.canRedo(history);
     status.textContent = [
       `条件 ${matrix.rows.length}行・試験 ${matrix.testCount}列`,
       `ブラウザ内の保存：${canUseStorage() ? '利用可能' : '利用不可（Markdownの出力でバックアップしてください）'}`,
     ].join('　｜　');
+  }
+
+  // データを変える操作。変わらなければ履歴に積まない。編集すると警告の強調表示は消える
+  function update(operation) {
+    const matrix = operation(history.present.matrix);
+    if (matrix === history.present.matrix) return render();
+    history = History.push(history, { matrix, warnings: [] });
+    render();
+  }
+
+  function undo() {
+    history = History.undo(history);
+    render();
+  }
+
+  function redo() {
+    history = History.redo(history);
+    render();
   }
 
   // Markdownを読み込む。読み込めたら1回の操作として履歴に積む（ダイアログはM5で作る）
@@ -818,10 +1305,9 @@ const App = (() => {
     const result = MarkdownFormat.parse(text);
     if (!result.ok) return result;
     const matrix = Matrix.withIds(result.matrix);
-    const changed = Checks.compareLeft(history.present, matrix);
+    const changed = Checks.compareLeft(history.present.matrix, matrix);
     if (changed) result.warnings.push(changed);
-    history = History.push(history, matrix);
-    warnings = result.warnings;
+    history = History.push(history, { matrix, warnings: result.warnings });
     render();
     return result;
   }
@@ -836,6 +1322,9 @@ const App = (() => {
       return false;
     }
   }
+
+  buttons.undo.addEventListener('click', undo);
+  buttons.redo.addEventListener('click', redo);
 
   render();
   return { importMarkdown };

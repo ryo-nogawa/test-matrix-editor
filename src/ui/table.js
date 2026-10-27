@@ -30,10 +30,14 @@ const TableView = (() => {
     const out = [];
     out.push('<table class="matrix"><thead><tr class="head-1">');
     matrix.headers.forEach((h, c) => {
-      out.push(`<th class="left level" rowspan="2" data-col="${c}" ${leftStyle(c, LEVEL_WIDTH)}>${escape(h)}</th>`);
+      // 階層の列の右端の見出しに、階層の列を追加する＋を付ける
+      const isLast = c === levelCount - 1;
+      const addLevel = isLast ? '<button type="button" class="add-level" title="階層の列を追加">+</button>' : '';
+      out.push(`<th class="left level${isLast ? ' last-level' : ''}" rowspan="2" data-col="${c}" ${leftStyle(c, LEVEL_WIDTH)}><span class="text">${escape(h)}</span>${addLevel}</th>`);
     });
     out.push(`<th class="left value" rowspan="2" data-col="${levelCount}" ${leftStyle(levelCount, VALUE_WIDTH)}>${escape(matrix.valueHeader)}</th>`);
     out.push(`<th class="test-group" colspan="${Math.max(testCount, 1)}">試験項番</th>`);
+    out.push('<th class="add-test" rowspan="2" title="試験の列を右端に追加">+</th>');
     out.push('</tr><tr class="head-2">');
     if (testCount === 0) out.push('<th class="test-no empty">なし</th>');
     numbers.forEach((no, t) => {

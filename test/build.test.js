@@ -10,9 +10,14 @@ const html = fs.readFileSync(build(), 'utf8');
 test('まとめたスクリプトが、ブラウザと同じく1つのスクリプトとして動く', () => {
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
   // ブラウザには module が無いので、各ファイルは互いをグローバル変数として参照する
-  // 画面の部品は、起動処理が動く最低限の形だけを用意する
-  const fakeElement = () => ({ style: {}, dataset: {}, querySelector: fakeElement, querySelectorAll: () => [] });
-  const context = vm.createContext({ document: { getElementById: fakeElement } });
+  // 画面の部品の代わり。どのプロパティを読んでも、どう呼び出しても、また同じ代わりの部品を返す
+  const fake = () =>
+    new Proxy(function () {}, {
+      get: (_, key) => (key === Symbol.toPrimitive ? () => '' : fake()),
+      apply: () => fake(),
+      set: () => true,
+    });
+  const context = vm.createContext({ document: fake(), window: fake() });
   vm.runInContext(`${script}\nthis.core = { MarkdownFormat, Matrix, Checks, History, App };`, context);
   const { MarkdownFormat, Matrix, Checks, History, App } = context.core;
   assert.equal(typeof App.importMarkdown, 'function');

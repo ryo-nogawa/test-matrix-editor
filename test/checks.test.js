@@ -63,6 +63,10 @@ test('網羅チェック：出力の行にだけ ○ がある試験の列は、
   assert.deepEqual(coverage(m).tests, [1]);
 });
 
+test('網羅チェック：試験の列がまだ無いうちは調べない', () => {
+  assert.deepEqual(coverage(loginMatrix()), { rows: [], tests: [] });
+});
+
 test('網羅チェック：「出力（結果）」のような表記も出力の行とみなす', () => {
   const m = loginMatrix([[''], ['○'], ['○'], ['○'], ['']]);
   m.rows[0].levels[0] = '入力（事前条件）';

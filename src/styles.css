@@ -6,6 +6,7 @@
   --warn-bg: #ffe3b3;
   --uncovered-bg: #fde0e0;
   --uncovered-text: #b3261e;
+  --accent: #2b6fd6;
 }
 
 * {
@@ -75,6 +76,11 @@ body {
   overflow-wrap: anywhere;
 }
 
+/* 空の行もつぶれないように、行の高さの最小値を決める */
+.matrix td {
+  height: 34px;
+}
+
 .matrix thead th {
   position: sticky;
   top: 0;
@@ -135,6 +141,136 @@ body {
 .matrix th.test-no.uncovered {
   background: var(--uncovered-bg);
   color: var(--uncovered-text);
+}
+
+/* ---------- 編集操作 ---------- */
+
+.matrix .left,
+.matrix .mark {
+  cursor: pointer;
+}
+
+.matrix .left:hover,
+.matrix .mark:hover {
+  outline: 1px solid #9bb8e8;
+  outline-offset: -1px;
+}
+
+/* クリック・右クリックしたセル */
+.matrix .selected {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* その場で編集する入力欄 */
+.cell-input {
+  width: 100%;
+  padding: 2px 4px;
+  border: 1px solid var(--accent);
+  font: inherit;
+}
+
+/* 階層の列を追加する＋（階層の列の右端の見出し） */
+/* ＋が右隣の「具体値」の見出しに隠れないよう、右端の階層の見出しを手前に出す */
+.matrix thead th.last-level {
+  z-index: 4;
+}
+
+.matrix .add-level {
+  position: absolute;
+  top: 50%;
+  right: -11px;
+  z-index: 4;
+  transform: translateY(-50%);
+}
+
+/* 試験の列を右端に追加する＋ */
+.matrix th.add-test {
+  min-width: 36px;
+  color: #444;
+  font-size: 18px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.matrix th.test-no.empty {
+  cursor: pointer;
+}
+
+.matrix .add-level,
+.insert-plus {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: #fff;
+  color: #222;
+  font: 700 14px/1 sans-serif;
+  cursor: pointer;
+}
+
+/* 行・列の間に出す破線と＋ */
+.insert-line {
+  position: fixed;
+  z-index: 10;
+  border-top: 2px dashed var(--accent);
+  pointer-events: none;
+}
+
+.insert-line.vertical {
+  border-top: none;
+  border-left: 2px dashed var(--accent);
+}
+
+.insert-plus {
+  position: fixed;
+  z-index: 11;
+  transform: translate(-50%, -50%);
+}
+
+/* 印のプルダウンと右クリックメニュー */
+.popup {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  padding: 4px;
+  border: 1.5px solid var(--accent);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+}
+
+.popup[hidden] {
+  display: none;
+}
+
+.popup button {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.popup button:hover:not(:disabled) {
+  background: #eef3fc;
+}
+
+.popup button:disabled {
+  color: #aaa;
+  cursor: default;
+}
+
+.popup hr {
+  width: 100%;
+  margin: 4px 0;
+  border: none;
+  border-top: 1px solid var(--line);
 }
 
 /* ---------- ステータス ---------- */
