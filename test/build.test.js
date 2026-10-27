@@ -2,9 +2,20 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
+const vm = require('vm');
 const { build } = require('../scripts/build.js');
 
 const html = fs.readFileSync(build(), 'utf8');
+
+test('まとめたスクリプトが、ブラウザと同じく1つのスクリプトとして動く', () => {
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  // ブラウザには module が無いので、各ファイルは互いをグローバル変数として参照する
+  const context = vm.createContext({ document: { getElementById: () => ({}) } });
+  vm.runInContext(`${script}\nthis.MarkdownFormat = MarkdownFormat;`, context);
+  const result = context.MarkdownFormat.parse('| 種類 | 具体値 | 001 |\n| --- | --- | --- |\n| 入力 | x | ◯ |');
+  assert.equal(result.ok, true);
+  assert.equal(result.matrix.rows[0].marks[0], '○');
+});
 
 test('CSSとJavaScriptの埋め込み位置がすべて置き換わっている', () => {
   assert.ok(!html.includes('/* @STYLES */'));

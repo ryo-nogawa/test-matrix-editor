@@ -9,7 +9,7 @@ const OUT = path.join(ROOT, 'dist', 'test-matrix-editor.html');
 
 // 読み込む順番が意味を持つため、ファイルはここに順番どおりに並べる
 const STYLES = ['styles.css'];
-const SCRIPTS = ['app.js'];
+const SCRIPTS = ['core/marks.js', 'core/markdown.js', 'app.js'];
 
 const STYLES_MARK = '/* @STYLES */';
 const SCRIPTS_MARK = '/* @SCRIPTS */';
