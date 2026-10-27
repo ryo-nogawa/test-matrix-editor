@@ -2,6 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { compareLeft, coverage, mergeSpans } = require('../src/core/checks.js');
+const Matrix = require('../src/core/matrix.js');
 const { loginMatrix } = require('./helpers.js');
 
 const rowCells = (w) => w.cells.map((c) => c.row);
@@ -16,6 +17,10 @@ test('改変チェック：左側が同じなら差分なし（試験の列が�
 test('W6：画面が空なら改変チェックを省略する', () => {
   const empty = { ...loginMatrix(), rows: [] };
   assert.equal(compareLeft(empty, loginMatrix()).code, 'W6');
+});
+
+test('W6：「種類」だけの初期状態も、条件が無いものとして省略する', () => {
+  assert.equal(compareLeft(Matrix.createDefault(), loginMatrix()).code, 'W6');
 });
 
 test('W5：書き換えられた行', () => {
@@ -47,9 +52,22 @@ test('W5：見出しの変更', () => {
 
 // ---------- 網羅チェック ----------
 
-test('網羅チェック：○ が1つも無い行と列', () => {
+test('網羅チェック：○ が1つも無い行と列（出力の行は対象外）', () => {
+  // 5行目は出力の行。○ が無くても数えない
   const m = loginMatrix([['○', '', '−'], ['', '○', ''], ['○', '', ''], ['−', '', ''], ['', '', '']]);
-  assert.deepEqual(coverage(m), { rows: [3, 4], tests: [2] });
+  assert.deepEqual(coverage(m), { rows: [3], tests: [2] });
+});
+
+test('網羅チェック：出力の行にだけ ○ がある試験の列は、○ が無いものとして数える', () => {
+  const m = loginMatrix([['○', ''], ['○', ''], [''], [''], ['', '○']].map((r) => [...r, ''].slice(0, 2)));
+  assert.deepEqual(coverage(m).tests, [1]);
+});
+
+test('網羅チェック：「出力（結果）」のような表記も出力の行とみなす', () => {
+  const m = loginMatrix([[''], ['○'], ['○'], ['○'], ['']]);
+  m.rows[0].levels[0] = '入力（事前条件）';
+  m.rows[4].levels[0] = '出力（結果）';
+  assert.deepEqual(coverage(m).rows, [0]);
 });
 
 // ---------- セル結合 ----------

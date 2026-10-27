@@ -10,9 +10,12 @@ const html = fs.readFileSync(build(), 'utf8');
 test('まとめたスクリプトが、ブラウザと同じく1つのスクリプトとして動く', () => {
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
   // ブラウザには module が無いので、各ファイルは互いをグローバル変数として参照する
-  const context = vm.createContext({ document: { getElementById: () => ({}) } });
-  vm.runInContext(`${script}\nthis.core = { MarkdownFormat, Matrix, Checks, History };`, context);
-  const { MarkdownFormat, Matrix, Checks, History } = context.core;
+  // 画面の部品は、起動処理が動く最低限の形だけを用意する
+  const fakeElement = () => ({ style: {}, dataset: {}, querySelector: fakeElement, querySelectorAll: () => [] });
+  const context = vm.createContext({ document: { getElementById: fakeElement } });
+  vm.runInContext(`${script}\nthis.core = { MarkdownFormat, Matrix, Checks, History, App };`, context);
+  const { MarkdownFormat, Matrix, Checks, History, App } = context.core;
+  assert.equal(typeof App.importMarkdown, 'function');
   const result = MarkdownFormat.parse('| 種類 | 具体値 | 001 |\n| --- | --- | --- |\n| 入力 | x | ◯ |');
   assert.equal(result.ok, true);
   assert.equal(result.matrix.rows[0].marks[0], '○');

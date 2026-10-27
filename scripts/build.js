@@ -15,6 +15,7 @@ const SCRIPTS = [
   'core/matrix.js',
   'core/checks.js',
   'core/history.js',
+  'ui/table.js',
   'app.js',
 ];
 

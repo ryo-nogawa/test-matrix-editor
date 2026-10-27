@@ -1,14 +1,33 @@
+:root {
+  --line: #cfd4db;
+  --line-strong: #8a9099;
+  --left-bg: #eef1f5;
+  --head-bg: #e3e7ed;
+  --warn-bg: #ffe3b3;
+  --uncovered-bg: #fde0e0;
+  --uncovered-text: #b3261e;
+}
+
 * {
   box-sizing: border-box;
 }
 
+html,
 body {
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
   margin: 0;
   font-family: "Meiryo", "Hiragino Sans", "Noto Sans JP", sans-serif;
   font-size: 14px;
   color: #222;
   background: #fff;
 }
+
+/* ---------- ツールバー ---------- */
 
 .toolbar {
   display: flex;
@@ -32,16 +51,97 @@ body {
   cursor: default;
 }
 
+/* ---------- 表 ---------- */
+
+/* 表をスクロールする領域。固定表示（sticky）はこの領域に対して効く */
 #app {
-  padding: 16px;
+  flex: 1;
+  overflow: auto;
 }
 
-.placeholder {
-  color: #777;
+.matrix {
+  border-collapse: separate; /* collapse だと固定表示したセルの罫線が消えるため */
+  border-spacing: 0;
 }
+
+.matrix th,
+.matrix td {
+  padding: 6px 8px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  vertical-align: middle;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.matrix thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--head-bg);
+  font-weight: 700;
+  text-align: left;
+}
+
+/* 左側の条件の列：横にスクロールしても固定する */
+.matrix .left {
+  position: sticky;
+  z-index: 1;
+  background: var(--left-bg);
+}
+
+/* 左上の見出し：縦にも横にも固定する */
+.matrix thead th.left {
+  z-index: 3;
+  background: var(--head-bg);
+}
+
+/* 左側と試験の列の境目 */
+.matrix .value {
+  border-right: 2px solid var(--line-strong);
+}
+
+.matrix .test-group {
+  text-align: center;
+}
+
+.matrix .test-no {
+  min-width: 44px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.matrix .mark {
+  min-width: 44px;
+  text-align: center;
+}
+
+.matrix .empty {
+  color: #999;
+  font-weight: 400;
+}
+
+/* ---------- 強調表示 ---------- */
+
+/* 警告（読み込めたが、不明な記号や改変がある） */
+.matrix td.warn,
+.matrix tr.warn-row td.left {
+  background: var(--warn-bg);
+}
+
+/* 網羅チェック（○ が1つも無い行・列） */
+.matrix tr.uncovered td.value,
+.matrix th.test-no.uncovered {
+  background: var(--uncovered-bg);
+  color: var(--uncovered-text);
+}
+
+/* ---------- ステータス ---------- */
 
 .status {
   padding: 4px 16px;
+  border-top: 1px solid #c9ced6;
   color: #666;
   font-size: 12px;
 }

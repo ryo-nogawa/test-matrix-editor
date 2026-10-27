@@ -25,10 +25,13 @@ const Checks = (() => {
     return pairs;
   }
 
+  // 「種類」だけが入った初期状態の行は、条件を入力したことにならない
+  const hasCondition = (row) => row.levels.slice(1).some((v) => v !== '') || row.value !== '';
+
   // 読み込む直前の画面（current）と、読み込んだ表（imported）の左側の条件を比べる。
-  // 差分が無ければ null、あれば W5、比較元が空なら W6 を返す
+  // 差分が無ければ null、あれば W5、比較元に条件が無ければ W6 を返す
   function compareLeft(current, imported) {
-    if (current.rows.length === 0) {
+    if (!current.rows.some(hasCondition)) {
       return { code: 'W6', message: '画面に条件が無いため、改変チェックを省略しました', cells: [] };
     }
 
@@ -72,16 +75,20 @@ const Checks = (() => {
 
   // ---------- 網羅チェック ----------
 
-  // ○ が1つも無い行と、○ が1つも無い試験の列の番号（0始まり）を返す
+  // 「種類」が出力（結果）の行。期待値は参考資料が無いと空欄で返るため、網羅チェックの対象から外す
+  const isOutputRow = (row) => row.levels[0].startsWith('出力');
+
+  // ○ が1つも無い行と、○ が1つも無い試験の列の番号（0始まり）を返す。出力の行は数えない
   function coverage(matrix) {
     const has = (m) => m === marks.CIRCLE;
+    const targets = matrix.rows.filter((row) => !isOutputRow(row));
     const rows = [];
     matrix.rows.forEach((row, r) => {
-      if (!row.marks.some(has)) rows.push(r);
+      if (!isOutputRow(row) && !row.marks.some(has)) rows.push(r);
     });
     const tests = [];
     for (let t = 0; t < matrix.testCount; t++) {
-      if (!matrix.rows.some((row) => has(row.marks[t]))) tests.push(t);
+      if (!targets.some((row) => has(row.marks[t]))) tests.push(t);
     }
     return { rows, tests };
   }
