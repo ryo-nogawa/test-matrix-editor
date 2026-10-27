@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>試験マトリクス作成支援ツール</title>
+<!-- 名前を付けて保存したとき、ここにマトリクスのデータが入る（要件定義書 5.5.2） -->
+<script type="application/json" id="matrix-data"></script>
 <style>
 /* ---- styles.css ---- */
 :root {
@@ -40,6 +42,8 @@ body {
 
 .toolbar {
   display: flex;
+  flex-wrap: wrap; /* 画面の幅が狭いときは2段に並べる */
+  align-items: center;
   gap: 8px;
   padding: 10px 16px;
   border-bottom: 1px solid #c9ced6;
@@ -52,12 +56,36 @@ body {
   border-radius: 6px;
   background: #fff;
   font: inherit;
+  white-space: nowrap;
   cursor: pointer;
 }
 
 .toolbar button:disabled {
   color: #999;
   cursor: default;
+}
+
+/* マトリクスの名前 */
+.toolbar .name-input {
+  width: 220px;
+  padding: 6px 10px;
+  border: 1px solid #9aa0a8;
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 700;
+}
+
+.toolbar .name-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+/* ボタンのまとまりの区切り */
+.toolbar-separator {
+  align-self: stretch;
+  width: 1px;
+  margin: 2px 4px;
+  background: #c9ced6;
 }
 
 /* ---------- 表 ---------- */
@@ -390,6 +418,10 @@ body {
 </head>
 <body>
 <header class="toolbar">
+  <input type="text" class="name-input" id="matrix-name" placeholder="名前（未設定）" aria-label="マトリクスの名前">
+  <button type="button" data-action="save">保存</button>
+  <button type="button" data-action="save-as">名前を付けて保存</button>
+  <span class="toolbar-separator"></span>
   <button type="button" data-action="export">Markdown出力</button>
   <button type="button" data-action="import">読み込み</button>
   <button type="button" data-action="copy-prompt">指示文コピー</button>
@@ -399,7 +431,8 @@ body {
 <main id="app"></main>
 <footer class="status" id="status"></footer>
 <script>
-// ---- docs/ai-prompt.md の指示文 ----
+// ---- ビルド時に埋め込む値 ----
+const TOOL_VERSION = "0.2.0";
 const PROMPT_TEMPLATE = "あなたはソフトウェアテストの設計者です。\n以下の「条件の表」をもとに試験ケースを設計し、試験項番の列を追加して、各セルに印を付けた表を返してください。\n\n# 表の読み方\n- 表の左側の列は、左から順に親・子・孫の階層になっている条件の定義です。\n- 試験項番の列の直前にある列は「具体値」で、その条件の具体的な値です。\n- 種類の列は、入力（事前条件）・機能（処理）・出力（結果）の分類です。\n\n# 試験ケースの考え方\n- 1つの試験項番（列）が、1つの試験ケースを表します。\n- 各試験ケースで、どの条件が成り立つかを印で表します。\n- 同じ親を持つ条件（例：同じ「項目」の下にある複数の「パターン」）は、1つの試験ケースの中では通常1つだけ選びます。\n- エラーになる条件（異常系）は、1つの試験ケースに1つだけ含めてください。正常系の条件と組み合わせ、どの条件でエラーになったかを区別できるようにします。\n- 機能の行は、表の上から下の順に処理されるものとみなします。\n- ある条件で処理が止まる場合（エラーで終了するなど）、それより後の処理の条件には「−」を付けます。\n- 入力・機能の行には、すべて少なくとも1つの試験ケースで「○」が付くようにしてください（出力の行は、次の「期待値の扱い」に従います）。\n- 不要な重複がないよう、できるだけ少ない試験ケースで網羅してください。\n\n# 期待値（種類が「出力（結果）」の行）の扱い\n- 期待値は、設計書・仕様書などの参考資料に書かれている内容に基づいてのみ記入してください。推測や一般的な慣例で記入してはいけません。\n- このメッセージに参考資料が添付または貼り付けられていない場合は、出力の行をすべて空欄にしてください。\n- 参考資料がある場合でも、資料から判断できない期待値は空欄にしてください。\n\n# 印の種類（この3種類以外は使わない）\n| 印 | 意味 |\n| --- | --- |\n| ○ | 確認する観点（この試験でこの条件が成り立つ・この結果を確認する） |\n| − | 手前の条件で処理が止まり、この条件には到達しない |\n| 空欄 | 該当しない（何も書かない） |\n\n# 出力の書式（厳守）\n1. Markdownの表を1つだけ返してください。表はコードブロック（```markdown）で囲んでください。\n2. 左側の列（見出し・値・行の順番・行の数）は一切変更しないでください。行の追加・削除・並べ替え・言い換え・省略をしないでください。\n3. 具体値の列の右に、試験項番の列を追加してください。\n4. 試験項番の見出しは、半角数字3桁の連番（001, 002, 003, …）にしてください。「試験項番」などの見出しは付けないでください。\n5. 見出しは1行だけにしてください。セルの結合はしないでください。\n6. すべての行で、列の数を見出し行と同じにしてください。空欄のセルも「|  |」として省略せずに書いてください。\n7. 印は「○」「−」「空欄」のみを使ってください。「×」「✓」「●」などは使わないでください。\n\n# 補足説明\n表のコードブロックの後に、各試験項番の狙いを「001: ～」の形の箇条書きで1行ずつ書いてください（表にはしないでください）。\n空欄にした期待値がある場合は、続けて「期待値の未記入」として、空欄にした理由と、記入するために必要な資料・情報を箇条書きで書いてください。\n\n# 例\n条件の表：\n| 種類 | 対象 | 項目 | パターン | 具体値 |\n| --- | --- | --- | --- | --- |\n| 入力 | ログインAPI | リクエスト | 必須項目あり | login() |\n| 機能 | 会員確認 | 会員情報の検索 | 見つかる | true |\n| 機能 | 会員確認 | 会員情報の検索 | 見つからない | false |\n| 機能 | 状態確認 | アカウント状態 | ロック中 | locked |\n| 出力 | レスポンス | 結果コード | エラー | ERR |\n\n返す表：\n| 種類 | 対象 | 項目 | パターン | 具体値 | 001 | 002 |\n| --- | --- | --- | --- | --- | --- | --- |\n| 入力 | ログインAPI | リクエスト | 必須項目あり | login() | ○ | ○ |\n| 機能 | 会員確認 | 会員情報の検索 | 見つかる | true |  | ○ |\n| 機能 | 会員確認 | 会員情報の検索 | 見つからない | false | ○ |  |\n| 機能 | 状態確認 | アカウント状態 | ロック中 | locked | − | ○ |\n| 出力 | レスポンス | 結果コード | エラー | ERR |  |  |\n\n- 001: 会員情報が見つからない場合（アカウント状態の確認には到達しない）\n- 002: 会員情報は見つかるが、アカウントがロック中の場合\n\n期待値の未記入：\n- 参考資料が渡されていないため、出力の行はすべて空欄にした\n- 記入には、会員情報が見つからない場合とアカウントがロック中の場合の応答仕様（結果コード）が分かる設計書が必要\n\n※ 上の例は書式の説明用で、参考資料がない場合の書き方です。実際の試験ケースは、下の条件の表（と、渡された参考資料）だけをもとに設計してください。\n\n# 条件の表\n{{MATRIX}}";
 
 // ---- core/marks.js ----
@@ -974,6 +1007,91 @@ const Prompt = (() => {
 
 if (typeof module !== 'undefined') module.exports = Prompt;
 
+// ---- core/savefile.js ----
+// 名前を付けて保存するデータ入りHTML（要件定義書 5.5.2）
+//
+// ツールのHTMLの head にある、id が matrix-data の script 要素（src/index.html）に、
+// マトリクスのデータをJSONで埋め込む。開いたときは、そこからデータを取り出して復元する。
+// （このファイルには、その要素のタグをそのまま書かない。埋め込み場所と見分けがつかなくなるため）
+const SaveFile = (() => {
+  const matrixOps = typeof module !== 'undefined' ? require('./matrix.js') : Matrix;
+
+  const FORMAT = 'test-matrix-editor';
+  const VERSION = 1;
+  const DEFAULT_NAME = '無題の試験マトリクス';
+  // データを埋め込む要素。この正規表現自体はスクリプトの中では「application\/json」と書かれているため、
+  // ツールのスクリプトの文字に誤って一致することはない
+  const DATA_ELEMENT = /(<script type="application\/json" id="matrix-data">)([\s\S]*?)(<\/script>)/;
+
+  function newFileId() {
+    const bytes = new Uint8Array(8);
+    globalThis.crypto.getRandomValues(bytes);
+    return `f-${[...bytes].map((b) => b.toString(16).padStart(2, '0')).join('')}`;
+  }
+
+  function createData({ fileId, name, matrix, toolVersion, savedAt = new Date().toISOString() }) {
+    return { format: FORMAT, version: VERSION, toolVersion, fileId, name, savedAt, matrix };
+  }
+
+  function isValidData(data) {
+    return (
+      !!data &&
+      data.format === FORMAT &&
+      Number.isInteger(data.version) && data.version <= VERSION &&
+      typeof data.fileId === 'string' && data.fileId !== '' &&
+      typeof data.name === 'string' &&
+      typeof data.savedAt === 'string' &&
+      matrixOps.isValid(data.matrix)
+    );
+  }
+
+  // ツールのHTML（source）にデータを埋め込んだHTMLを返す。すでにデータがあれば差し替える
+  function embed(source, data) {
+    if (!DATA_ELEMENT.test(source)) throw new Error('データを埋め込む場所が見つかりません');
+    // データの中に script の終了タグの文字があっても途中で終わらないよう、< をエスケープする
+    // （このコメントにも終了タグそのものは書けない。HTMLに埋め込むとスクリプトがそこで終わるため）
+    const json = JSON.stringify(data).replace(/</g, '\\u003c');
+    return source.replace(DATA_ELEMENT, (_, open, __, close) => `${open}${json}${close}`);
+  }
+
+  // 埋め込まれた要素の中身（JSON）からデータを取り出す。無い・壊れているときは null
+  function parseData(text) {
+    if (!text || !text.trim()) return null;
+    try {
+      const data = JSON.parse(text);
+      return isValidData(data) ? data : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // HTMLの文字列からデータを取り出す（古い版で保存したHTMLの読み込みに使う）
+  function extract(html) {
+    const match = String(html).match(DATA_ELEMENT);
+    return match ? parseData(match[2]) : null;
+  }
+
+  // ファイル名に使えない文字は全角に置き換える
+  function fileName(name) {
+    const half = '\\/:*?"<>|';
+    const full = '＼／：＊？＂＜＞｜';
+    const safe = String(name).trim().replace(/[\\/:*?"<>|]/g, (ch) => full[half.indexOf(ch)]);
+    return `${safe || DEFAULT_NAME}.html`;
+  }
+
+  // 保存したHTMLを開いたとき、ファイルの内容（embedded）と自動保存（autosaved）のどちらを使うか。
+  // 自動保存のほうが新しく、内容も違うときだけ 'ask'（利用者に選んでもらう）
+  function chooseOnOpen(embedded, autosaved) {
+    if (!autosaved || autosaved.savedAt <= embedded.savedAt) return 'file';
+    const same = autosaved.name === embedded.name && JSON.stringify(autosaved.matrix) === JSON.stringify(embedded.matrix);
+    return same ? 'file' : 'ask';
+  }
+
+  return { createData, embed, parseData, extract, fileName, chooseOnOpen, newFileId, DEFAULT_NAME };
+})();
+
+if (typeof module !== 'undefined') module.exports = SaveFile;
+
 // ---- ui/table.js ----
 // 表の描画。マトリクスのデータから表のHTMLを作る（書式仕様書 8章、要件定義書 5.10）
 //
@@ -1469,18 +1587,90 @@ const Dialogs = (() => {
   return { open, message, toast };
 })();
 
+// ---- ui/files.js ----
+// データ入りHTMLのファイルへの書き出し（要件定義書 5.5.2）
+//   - 保存の画面（showSaveFilePicker）で、保存先とファイル名を選ぶ
+//   - 一度保存したファイルは覚えておき、「保存」で上書きする
+//   - 保存の画面が使えない環境では、通常のダウンロードで保存する
+const Files = (() => {
+  // 表を描く前の、ツール自身のHTML。保存するときは、ここにデータを埋め込む。
+  // （ブラウザは file:// で開いた自分のファイルを読み直せないため、起動直後の内容を控えておく）
+  const source = `<!DOCTYPE html>\n${document.documentElement.outerHTML}`;
+
+  let handle = null; // 最後に保存したファイル。開き直すと消える（ブラウザの制約）
+
+  // 結果は { method: 'picker' | 'download' | 'cancel', fileName }
+  async function saveAs(html, suggestedName) {
+    if (typeof window.showSaveFilePicker === 'function') {
+      try {
+        const picked = await window.showSaveFilePicker({
+          suggestedName,
+          types: [{ description: 'HTMLファイル', accept: { 'text/html': ['.html'] } }],
+        });
+        await write(picked, html);
+        handle = picked;
+        return { method: 'picker', fileName: picked.name };
+      } catch (e) {
+        if (e.name === 'AbortError') return { method: 'cancel', fileName: null }; // 利用者がキャンセルした
+        // 会社の設定などで保存の画面が使えないときは、ダウンロードに切り替える
+      }
+    }
+    download(html, suggestedName);
+    return { method: 'download', fileName: suggestedName };
+  }
+
+  // 覚えているファイルに上書きする。覚えていなければ saveAs と同じ
+  async function save(html, suggestedName) {
+    if (!handle) return saveAs(html, suggestedName);
+    try {
+      await write(handle, html);
+      return { method: 'picker', fileName: handle.name };
+    } catch (e) {
+      handle = null; // ファイルが移動・削除された、上書きが許可されなかった、など
+      return saveAs(html, suggestedName);
+    }
+  }
+
+  async function write(fileHandle, html) {
+    const writable = await fileHandle.createWritable();
+    await writable.write(new Blob([html], { type: 'text/html' }));
+    await writable.close();
+  }
+
+  function download(html, fileName) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+    a.download = fileName;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  // このHTMLに埋め込まれているデータ。元のツールなら null
+  function embeddedData() {
+    return SaveFile.parseData(document.getElementById('matrix-data')?.textContent);
+  }
+
+  return { source: () => source, saveAs, save, embeddedData };
+})();
+
 // ---- ui/storage.js ----
-// ブラウザ内への一時保存（要件定義書 5.5）
+// ブラウザ内への一時保存（要件定義書 5.5.1）
 //
 // file:// で開いたページは、同じPCのほかの file:// のページと保存領域を共有するため、
-// このツール専用の名前（KEY）で保存する。キャッシュを消すと消えるので、バックアップはMarkdownの出力で行う
+// このツール専用の名前で保存する。さらに、名前を付けて保存したHTMLはファイルごとに別の枠を使い、
+// ほかのマトリクスの自動保存と混ざらないようにする。
+// キャッシュを消すと消えるので、バックアップは名前を付けて保存、またはMarkdownの出力で行う
 const AutoSave = (() => {
-  const KEY = 'test-matrix-editor/matrix';
+  const UNNAMED_KEY = 'test-matrix-editor/matrix';
+  const FILE_KEY_PREFIX = 'test-matrix-editor/file/';
   const VERSION = 1;
+
+  // fileId が無い（元のツール）ときは、名前の無いマトリクス用の枠を使う
+  const keyOf = (fileId) => (fileId ? `${FILE_KEY_PREFIX}${fileId}` : UNNAMED_KEY);
 
   function available() {
     try {
-      const probe = `${KEY}/probe`;
+      const probe = 'test-matrix-editor/probe';
       localStorage.setItem(probe, '1');
       localStorage.removeItem(probe);
       return true;
@@ -1489,36 +1679,48 @@ const AutoSave = (() => {
     }
   }
 
-  // 保存できたら true。容量不足などで保存できなければ false
-  function save(matrix) {
+  // 保存できたら保存した日時（ISO形式の文字列）、容量不足などで保存できなければ null
+  function save(fileId, { name, matrix }) {
     try {
-      localStorage.setItem(KEY, JSON.stringify({ version: VERSION, savedAt: new Date().toISOString(), matrix }));
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // 保存されたデータが無い・壊れている場合は null
-  function load() {
-    try {
-      const data = JSON.parse(localStorage.getItem(KEY));
-      return data?.version === VERSION && Matrix.isValid(data.matrix) ? data.matrix : null;
+      const savedAt = new Date().toISOString();
+      localStorage.setItem(keyOf(fileId), JSON.stringify({ version: VERSION, savedAt, name, matrix }));
+      return savedAt;
     } catch (e) {
       return null;
     }
   }
 
-  return { available, save, load };
+  // { name, matrix, savedAt } を返す。保存されたデータが無い・壊れている場合は null
+  function load(fileId) {
+    try {
+      const data = JSON.parse(localStorage.getItem(keyOf(fileId)));
+      if (data?.version !== VERSION || !Matrix.isValid(data.matrix)) return null;
+      return { name: typeof data.name === 'string' ? data.name : '', matrix: data.matrix, savedAt: data.savedAt };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function clear(fileId) {
+    try {
+      localStorage.removeItem(keyOf(fileId));
+    } catch (e) {
+      // 保存領域が使えない環境では、消すものも無い
+    }
+  }
+
+  return { available, save, load, clear };
 })();
 
 // ---- ui/toolbar.js ----
 // ツールバーの「Markdown出力」「読み込み」「指示文コピー」（要件定義書 5.4・5.7・5.9）
 const Toolbar = (() => {
-  function attach({ getMatrix, importMarkdown }) {
+  function attach({ getMatrix, importMarkdown, importSaved, save, saveAs }) {
     const on = (action, handler) => document.querySelector(`[data-action="${action}"]`).addEventListener('click', handler);
+    on('save', save);
+    on('save-as', saveAs);
     on('export', () => openExport(getMatrix()));
-    on('import', () => openImport(importMarkdown));
+    on('import', () => openImport(importMarkdown, importSaved));
     on('copy-prompt', () => copyPrompt(getMatrix()));
   }
 
@@ -1553,20 +1755,36 @@ const Toolbar = (() => {
 
   // ---------- 読み込み ----------
 
-  function openImport(importMarkdown) {
+  function openImport(importMarkdown, importSaved) {
     const area = Object.assign(document.createElement('textarea'), {
       className: 'markdown-area',
       placeholder: 'AIが返したMarkdownを、説明文ごと貼り付けてください。',
     });
-    const file = Object.assign(document.createElement('input'), { type: 'file', accept: '.md,.txt,text/markdown,text/plain' });
+    const file = Object.assign(document.createElement('input'), { type: 'file', accept: '.md,.txt,.html,text/markdown,text/plain,text/html' });
     file.addEventListener('change', async () => {
-      if (file.files[0]) area.value = await file.files[0].text();
+      const picked = file.files[0];
+      if (!picked) return;
+      const text = await picked.text();
+      if (!/\.html?$/i.test(picked.name)) {
+        area.value = text;
+        return;
+      }
+      // 名前を付けて保存したHTML（古い版のツールで保存したものを含む）から、データだけを取り出す
+      const data = SaveFile.extract(text);
+      if (!data) {
+        Dialogs.message('読み込めませんでした', `${picked.name} には、このツールで保存したマトリクスのデータがありません。`, [], 'error');
+        file.value = '';
+        return;
+      }
+      close();
+      importSaved(data);
+      Dialogs.toast(`${picked.name} から「${data.name || SaveFile.DEFAULT_NAME}」を読み込みました`);
     });
     const fileRow = document.createElement('label');
     fileRow.className = 'file-row';
-    fileRow.append('ファイルから読み込む：', file);
+    fileRow.append('ファイルから読み込む（.md または保存したHTML）：', file);
 
-    Dialogs.open({
+    const { close } = Dialogs.open({
       title: '読み込み',
       wide: true,
       body: [fileRow, area],
@@ -1650,17 +1868,37 @@ const Toolbar = (() => {
 const App = (() => {
   const container = document.getElementById('app');
   const status = document.getElementById('status');
+  const nameInput = document.getElementById('matrix-name');
   const buttons = {
     undo: document.querySelector('[data-action="undo"]'),
     redo: document.querySelector('[data-action="redo"]'),
   };
+  const BASE_TITLE = '試験マトリクス作成支援ツール';
+
+  // このHTMLが表すファイル（要件定義書 5.5.2）。元のツールなら fileId は null。
+  // saved は、最後にファイルへ保存した（または開いた）ときの内容。未保存の変更があるかを調べるのに使う
+  const doc = { fileId: null, name: '', saved: null, savedAt: null };
+  let storageOk = AutoSave.available();
+  let autoSavedAt = null;
+  let pendingChoice = null; // 開いたときに「続きから開くか」を聞く自動保存のデータ
 
   // 履歴には、データと「そのデータを読み込んだときの警告」を組にして積む。
   // 読み込んだ直後の状態に戻したときは、警告の強調表示も元に戻る。
-  // 起動時は、ブラウザに保存しておいたデータがあればそれを使う
-  const saved = AutoSave.load();
-  let history = History.create({ matrix: saved || Matrix.createDefault(), warnings: [] });
-  let savedAt = saved ? new Date() : null;
+  // 起動時は、保存したHTMLならそのデータ、元のツールならブラウザ内の自動保存を使う
+  let history;
+  const embedded = Files.embeddedData();
+  if (embedded) {
+    Object.assign(doc, { fileId: embedded.fileId, name: embedded.name, savedAt: new Date(embedded.savedAt) });
+    doc.saved = { matrix: embedded.matrix, name: embedded.name };
+    history = History.create({ matrix: embedded.matrix, warnings: [] });
+    const auto = AutoSave.load(embedded.fileId);
+    if (SaveFile.chooseOnOpen(embedded, auto) === 'ask') pendingChoice = auto;
+  } else {
+    const auto = AutoSave.load(null);
+    doc.name = auto?.name || '';
+    history = History.create({ matrix: auto?.matrix || Matrix.createDefault(), warnings: [] });
+    autoSavedAt = auto ? new Date(auto.savedAt) : null;
+  }
 
   const editing = Editing.attach({
     container,
@@ -1671,7 +1909,15 @@ const App = (() => {
     refresh: render,
   });
 
-  Toolbar.attach({ getMatrix: () => history.present.matrix, importMarkdown });
+  Toolbar.attach({
+    getMatrix: () => history.present.matrix,
+    importMarkdown,
+    importSaved,
+    save: () => saveToFile({ asNew: false }),
+    saveAs: () => saveToFile({ asNew: true }),
+  });
+
+  // ---------- 描画 ----------
 
   function render() {
     const { matrix, warnings } = history.present;
@@ -1684,17 +1930,21 @@ const App = (() => {
     });
     buttons.undo.disabled = !History.canUndo(history);
     buttons.redo.disabled = !History.canRedo(history);
-    renderStatus(coverage);
+    renderStatus();
   }
 
-  function renderStatus(coverage) {
+  function renderStatus() {
     const { matrix } = history.present;
-    const time = savedAt && savedAt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     status.textContent = [
       `条件 ${matrix.rows.length}行・試験 ${matrix.testCount}列`,
-      coverageText(matrix, coverage),
-      savedAt ? `ブラウザ内に保存しました（${time}）` : 'ブラウザ内に保存できません。Markdown出力でバックアップしてください',
-    ].join('　｜　');
+      coverageText(matrix, Checks.coverage(matrix)),
+      doc.fileId && (isDirty() ? 'ファイル：未保存の変更あり' : `ファイル：保存済み（${formatTime(doc.savedAt)}）`),
+      storageOk
+        ? autoSavedAt && `ブラウザ内に自動保存しました（${formatTime(autoSavedAt)}）`
+        : 'ブラウザ内に保存できません。「保存」でファイルに残してください',
+    ].filter(Boolean).join('　｜　');
+    // タブの名前。未保存の変更があれば先頭に「*」を付ける
+    document.title = doc.name || doc.fileId ? `${isDirty() ? '* ' : ''}${doc.name || SaveFile.DEFAULT_NAME} - ${BASE_TITLE}` : BASE_TITLE;
   }
 
   function coverageText(matrix, { rows, tests }) {
@@ -1703,9 +1953,20 @@ const App = (() => {
     return `網羅チェック：○が無い条件 ${rows.length}行・試験 ${tests.length}列`;
   }
 
-  // 変更のたびにブラウザ内へ保存する
-  function save() {
-    savedAt = AutoSave.save(history.present.matrix) ? new Date() : null;
+  const formatTime = (date) => date.toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  // 最後にファイルへ保存した後に、変更があるか（データは操作のたびに新しく作られるので、同じものかで比べられる）
+  function isDirty() {
+    return !!doc.fileId && (history.present.matrix !== doc.saved.matrix || doc.name !== doc.saved.name);
+  }
+
+  // ---------- 変更の操作 ----------
+
+  // 変更のたびにブラウザ内へ保存する。保存したHTMLなら、そのファイル専用の枠に保存する
+  function autoSave() {
+    const at = AutoSave.save(doc.fileId, { name: doc.name, matrix: history.present.matrix });
+    storageOk = !!at;
+    if (at) autoSavedAt = new Date(at);
   }
 
   // データを変える操作。変わらなければ履歴に積まない。編集すると警告の強調表示は消える
@@ -1713,21 +1974,34 @@ const App = (() => {
     const matrix = operation(history.present.matrix);
     if (matrix === history.present.matrix) return render();
     history = History.push(history, { matrix, warnings: [] });
-    save();
+    autoSave();
     render();
   }
 
   function undo() {
     history = History.undo(history);
-    save();
+    autoSave();
     render();
   }
 
   function redo() {
     history = History.redo(history);
-    save();
+    autoSave();
     render();
   }
+
+  // 名前の変更は、元に戻す・やり直しの対象にしない（表の内容の操作ではないため）
+  nameInput.value = doc.name;
+  nameInput.addEventListener('input', () => {
+    doc.name = nameInput.value.trim();
+    autoSave();
+    renderStatus();
+  });
+  nameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.isComposing) nameInput.blur();
+  });
+
+  // ---------- 読み込み ----------
 
   // Markdownを読み込む。読み込めたら1回の操作として履歴に積む
   function importMarkdown(text) {
@@ -1737,15 +2011,82 @@ const App = (() => {
     const changed = Checks.compareLeft(history.present.matrix, matrix);
     if (changed) result.warnings.push(changed);
     history = History.push(history, { matrix, warnings: result.warnings });
-    save();
+    autoSave();
     render();
     return result;
   }
+
+  // 保存したHTML（古い版のツールで保存したものを含む）から取り出したデータを読み込む。
+  // 名前は取り込むが、ファイルのIDは取り込まない（読み込んだファイルと今の画面は別物として扱う）
+  function importSaved(data) {
+    history = History.push(history, { matrix: data.matrix, warnings: [] });
+    doc.name = data.name;
+    nameInput.value = data.name;
+    autoSave();
+    render();
+  }
+
+  // ---------- ファイルへの保存 ----------
+
+  // asNew：「名前を付けて保存」。新しいファイル（新しいID）として保存する
+  async function saveToFile({ asNew }) {
+    const isNewFile = asNew || !doc.fileId;
+    const fileId = isNewFile ? SaveFile.newFileId() : doc.fileId;
+    const { matrix } = history.present;
+    const name = doc.name;
+    const data = SaveFile.createData({ fileId, name, matrix, toolVersion: TOOL_VERSION });
+    const html = SaveFile.embed(Files.source(), data);
+    const suggestedName = SaveFile.fileName(name);
+
+    const result = isNewFile ? await Files.saveAs(html, suggestedName) : await Files.save(html, suggestedName);
+    if (result.method === 'cancel') return;
+
+    if (isNewFile) {
+      // 元のツールから初めて保存したときは、名前の無い枠を空に戻す（元のツールを次に開くと新規の状態になる）
+      if (!doc.fileId) AutoSave.clear(null);
+      doc.fileId = fileId;
+    }
+    doc.saved = { matrix, name };
+    doc.savedAt = new Date(data.savedAt);
+    autoSave();
+    renderStatus();
+    Dialogs.toast(result.method === 'download'
+      ? `${result.fileName} をダウンロードフォルダに保存しました`
+      : `${result.fileName} に保存しました`);
+  }
+
+  // ---------- 起動 ----------
 
   buttons.undo.addEventListener('click', undo);
   buttons.redo.addEventListener('click', redo);
 
   render();
+
+  // 保存した後に保存していない編集が残っていれば、どちらで開くかを選んでもらう
+  if (pendingChoice) {
+    const lead = Object.assign(document.createElement('p'), {
+      textContent: `このファイルを保存した後に、保存していない編集があります（${formatTime(new Date(pendingChoice.savedAt))}）。続きから開きますか？`,
+    });
+    Dialogs.open({
+      title: '保存していない編集があります',
+      body: [lead],
+      buttons: [
+        { label: '保存した内容で開く', action: () => autoSave() },
+        {
+          label: '続きから開く',
+          primary: true,
+          action: () => {
+            history = History.create({ matrix: pendingChoice.matrix, warnings: [] });
+            doc.name = pendingChoice.name;
+            nameInput.value = doc.name;
+            autoSave();
+            render();
+          },
+        },
+      ],
+    });
+  }
+
   return { importMarkdown };
 })();
 

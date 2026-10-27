@@ -18,6 +18,7 @@ npm test        # node:test で test/**/*.test.js を実行
 
 - 配布物は `dist/test-matrix-editor.html` の1ファイル。外部ライブラリ・CDN・npmパッケージは使わない
 - `src/` を変更したら、ビルドして `dist/` も一緒にコミットする
+- `src/` のJavaScriptには、script の終了タグの文字と、データの埋め込み場所（`src/index.html` の id が `matrix-data` の script 要素）のタグを、コメントも含めてそのまま書かない。HTMLに埋め込むとスクリプトが途中で終わったり、埋め込み場所と見分けがつかなくなったりする（ビルドとテストで検出される）
 
 ## 動作確認
 

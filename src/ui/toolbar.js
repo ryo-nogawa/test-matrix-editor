@@ -1,9 +1,11 @@
 // ツールバーの「Markdown出力」「読み込み」「指示文コピー」（要件定義書 5.4・5.7・5.9）
 const Toolbar = (() => {
-  function attach({ getMatrix, importMarkdown }) {
+  function attach({ getMatrix, importMarkdown, importSaved, save, saveAs }) {
     const on = (action, handler) => document.querySelector(`[data-action="${action}"]`).addEventListener('click', handler);
+    on('save', save);
+    on('save-as', saveAs);
     on('export', () => openExport(getMatrix()));
-    on('import', () => openImport(importMarkdown));
+    on('import', () => openImport(importMarkdown, importSaved));
     on('copy-prompt', () => copyPrompt(getMatrix()));
   }
 
@@ -38,20 +40,36 @@ const Toolbar = (() => {
 
   // ---------- 読み込み ----------
 
-  function openImport(importMarkdown) {
+  function openImport(importMarkdown, importSaved) {
     const area = Object.assign(document.createElement('textarea'), {
       className: 'markdown-area',
       placeholder: 'AIが返したMarkdownを、説明文ごと貼り付けてください。',
     });
-    const file = Object.assign(document.createElement('input'), { type: 'file', accept: '.md,.txt,text/markdown,text/plain' });
+    const file = Object.assign(document.createElement('input'), { type: 'file', accept: '.md,.txt,.html,text/markdown,text/plain,text/html' });
     file.addEventListener('change', async () => {
-      if (file.files[0]) area.value = await file.files[0].text();
+      const picked = file.files[0];
+      if (!picked) return;
+      const text = await picked.text();
+      if (!/\.html?$/i.test(picked.name)) {
+        area.value = text;
+        return;
+      }
+      // 名前を付けて保存したHTML（古い版のツールで保存したものを含む）から、データだけを取り出す
+      const data = SaveFile.extract(text);
+      if (!data) {
+        Dialogs.message('読み込めませんでした', `${picked.name} には、このツールで保存したマトリクスのデータがありません。`, [], 'error');
+        file.value = '';
+        return;
+      }
+      close();
+      importSaved(data);
+      Dialogs.toast(`${picked.name} から「${data.name || SaveFile.DEFAULT_NAME}」を読み込みました`);
     });
     const fileRow = document.createElement('label');
     fileRow.className = 'file-row';
-    fileRow.append('ファイルから読み込む：', file);
+    fileRow.append('ファイルから読み込む（.md または保存したHTML）：', file);
 
-    Dialogs.open({
+    const { close } = Dialogs.open({
       title: '読み込み',
       wide: true,
       body: [fileRow, area],

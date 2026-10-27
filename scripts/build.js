@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const Prompt = require('../src/core/prompt.js');
+const { version: TOOL_VERSION } = require('../package.json');
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'src');
@@ -18,9 +19,11 @@ const SCRIPTS = [
   'core/checks.js',
   'core/history.js',
   'core/prompt.js',
+  'core/savefile.js',
   'ui/table.js',
   'ui/editing.js',
   'ui/dialogs.js',
+  'ui/files.js',
   'ui/storage.js',
   'ui/toolbar.js',
   'app.js',
@@ -33,10 +36,16 @@ function read(rel) {
   return fs.readFileSync(path.join(SRC, rel), 'utf8');
 }
 
-// AIへの指示文は docs/ai-prompt.md を正として、ビルドのたびに取り出して埋め込む
-function promptScript() {
+// AIへの指示文は docs/ai-prompt.md を正として、ビルドのたびに取り出して埋め込む。
+// ツールの版（保存したHTMLに記録する）は package.json の version を埋め込む
+function constantsScript() {
   const template = Prompt.extract(fs.readFileSync(PROMPT_DOC, 'utf8'));
-  return `// ---- docs/ai-prompt.md の指示文 ----\nconst PROMPT_TEMPLATE = ${JSON.stringify(template)};\n`;
+  return [
+    '// ---- ビルド時に埋め込む値 ----',
+    `const TOOL_VERSION = ${JSON.stringify(TOOL_VERSION)};`,
+    `const PROMPT_TEMPLATE = ${JSON.stringify(template)};`,
+    '',
+  ].join('\n');
 }
 
 function build() {
@@ -46,7 +55,7 @@ function build() {
   }
 
   const css = STYLES.map((f) => `/* ---- ${f} ---- */\n${read(f)}`).join('\n');
-  const js = [promptScript(), ...SCRIPTS.map((f) => `// ---- ${f} ----\n${read(f)}`)].join('\n');
+  const js = [constantsScript(), ...SCRIPTS.map((f) => `// ---- ${f} ----\n${read(f)}`)].join('\n');
   // スクリプトの中に </script> があると、そこでHTMLのscriptタグが終わってしまう
   if (/<\/script/i.test(js)) throw new Error('スクリプトの中に </script> が含まれています');
 

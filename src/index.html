@@ -4,12 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>試験マトリクス作成支援ツール</title>
+<!-- 名前を付けて保存したとき、ここにマトリクスのデータが入る（要件定義書 5.5.2） -->
+<script type="application/json" id="matrix-data"></script>
 <style>
 /* @STYLES */
 </style>
 </head>
 <body>
 <header class="toolbar">
+  <input type="text" class="name-input" id="matrix-name" placeholder="名前（未設定）" aria-label="マトリクスの名前">
+  <button type="button" data-action="save">保存</button>
+  <button type="button" data-action="save-as">名前を付けて保存</button>
+  <span class="toolbar-separator"></span>
   <button type="button" data-action="export">Markdown出力</button>
   <button type="button" data-action="import">読み込み</button>
   <button type="button" data-action="copy-prompt">指示文コピー</button>
