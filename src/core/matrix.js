@@ -40,6 +40,23 @@ const Matrix = (() => {
     };
   }
 
+  // ブラウザに保存しておいたデータが、マトリクスとして正しい形かを確かめる
+  function isValid(m) {
+    const isText = (v) => typeof v === 'string';
+    const isTextList = (v) => Array.isArray(v) && v.every(isText);
+    return (
+      !!m &&
+      isTextList(m.headers) && m.headers.length >= 1 &&
+      isText(m.valueHeader) &&
+      Number.isInteger(m.testCount) && m.testCount >= 0 &&
+      Array.isArray(m.rows) &&
+      m.rows.every((row) =>
+        !!row && isText(row.id) && isText(row.value) &&
+        isTextList(row.levels) && row.levels.length === m.headers.length &&
+        isTextList(row.marks) && row.marks.length === m.testCount)
+    );
+  }
+
   // ---------- 行 ----------
 
   // index の位置に行を挿入する。上の行から、階層の最下段の1つ手前までの値を引き継ぐ
@@ -139,7 +156,7 @@ const Matrix = (() => {
   }
 
   return {
-    createDefault, withIds,
+    createDefault, withIds, isValid,
     insertRow, deleteRow,
     insertTest, duplicateTest, deleteTest,
     addLevel, deleteLevel, renameLevel, renameValueHeader,

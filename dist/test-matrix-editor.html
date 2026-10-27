@@ -281,6 +281,96 @@ body {
   border-top: 1px solid var(--line);
 }
 
+/* ---------- ダイアログ ---------- */
+
+.dialog {
+  width: min(480px, calc(100vw - 32px));
+  padding: 20px 24px;
+  border: 1px solid #b9bfc8;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
+}
+
+.dialog.wide {
+  width: min(860px, calc(100vw - 32px));
+}
+
+.dialog::backdrop {
+  background: rgb(0 0 0 / 30%);
+}
+
+.dialog h2 {
+  margin: 0 0 12px;
+  font-size: 17px;
+}
+
+.dialog.error h2 {
+  color: var(--uncovered-text);
+}
+
+.dialog.warning h2 {
+  color: #9a5b00;
+}
+
+.dialog-body ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  line-height: 1.7;
+}
+
+.dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.dialog-buttons button {
+  padding: 6px 16px;
+  border: 1px solid #9aa0a8;
+  border-radius: 6px;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.dialog-buttons button.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.markdown-area {
+  width: 100%;
+  height: 50vh;
+  padding: 8px;
+  border: 1px solid #b9bfc8;
+  border-radius: 6px;
+  font: 13px/1.5 Consolas, Menlo, monospace;
+  white-space: pre;
+}
+
+.file-row {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.toast {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  z-index: 30;
+  padding: 8px 16px;
+  border-radius: 6px;
+  background: #333;
+  color: #fff;
+  transform: translateX(-50%);
+}
+
+.toast[hidden] {
+  display: none;
+}
+
 /* ---------- ステータス ---------- */
 
 .status {
@@ -294,15 +384,18 @@ body {
 </head>
 <body>
 <header class="toolbar">
-  <button type="button" data-action="export" disabled>Markdown出力</button>
-  <button type="button" data-action="import" disabled>読み込み</button>
-  <button type="button" data-action="copy-prompt" disabled>指示文コピー</button>
+  <button type="button" data-action="export">Markdown出力</button>
+  <button type="button" data-action="import">読み込み</button>
+  <button type="button" data-action="copy-prompt">指示文コピー</button>
   <button type="button" data-action="undo" disabled>元に戻す</button>
   <button type="button" data-action="redo" disabled>やり直し</button>
 </header>
 <main id="app"></main>
 <footer class="status" id="status"></footer>
 <script>
+// ---- docs/ai-prompt.md の指示文 ----
+const PROMPT_TEMPLATE = "あなたはソフトウェアテストの設計者です。\n以下の「条件の表」をもとに試験ケースを設計し、試験項番の列を追加して、各セルに印を付けた表を返してください。\n\n# 表の読み方\n- 表の左側の列は、左から順に親・子・孫の階層になっている条件の定義です。\n- 試験項番の列の直前にある列は「具体値」で、その条件の具体的な値です。\n- 種類の列は、入力（事前条件）・機能（処理）・出力（結果）の分類です。\n\n# 試験ケースの考え方\n- 1つの試験項番（列）が、1つの試験ケースを表します。\n- 各試験ケースで、どの条件が成り立つかを印で表します。\n- 同じ親を持つ条件（例：同じ「項目」の下にある複数の「パターン」）は、1つの試験ケースの中では通常1つだけ選びます。\n- エラーになる条件（異常系）は、1つの試験ケースに1つだけ含めてください。正常系の条件と組み合わせ、どの条件でエラーになったかを区別できるようにします。\n- 機能の行は、表の上から下の順に処理されるものとみなします。\n- ある条件で処理が止まる場合（エラーで終了するなど）、それより後の処理の条件には「−」を付けます。\n- 入力・機能の行には、すべて少なくとも1つの試験ケースで「○」が付くようにしてください（出力の行は、次の「期待値の扱い」に従います）。\n- 不要な重複がないよう、できるだけ少ない試験ケースで網羅してください。\n\n# 期待値（種類が「出力（結果）」の行）の扱い\n- 期待値は、設計書・仕様書などの参考資料に書かれている内容に基づいてのみ記入してください。推測や一般的な慣例で記入してはいけません。\n- このメッセージに参考資料が添付または貼り付けられていない場合は、出力の行をすべて空欄にしてください。\n- 参考資料がある場合でも、資料から判断できない期待値は空欄にしてください。\n\n# 印の種類（この3種類以外は使わない）\n| 印 | 意味 |\n| --- | --- |\n| ○ | 確認する観点（この試験でこの条件が成り立つ・この結果を確認する） |\n| − | 手前の条件で処理が止まり、この条件には到達しない |\n| 空欄 | 該当しない（何も書かない） |\n\n# 出力の書式（厳守）\n1. Markdownの表を1つだけ返してください。表はコードブロック（```markdown）で囲んでください。\n2. 左側の列（見出し・値・行の順番・行の数）は一切変更しないでください。行の追加・削除・並べ替え・言い換え・省略をしないでください。\n3. 具体値の列の右に、試験項番の列を追加してください。\n4. 試験項番の見出しは、半角数字3桁の連番（001, 002, 003, …）にしてください。「試験項番」などの見出しは付けないでください。\n5. 見出しは1行だけにしてください。セルの結合はしないでください。\n6. すべての行で、列の数を見出し行と同じにしてください。空欄のセルも「|  |」として省略せずに書いてください。\n7. 印は「○」「−」「空欄」のみを使ってください。「×」「✓」「●」などは使わないでください。\n\n# 補足説明\n表のコードブロックの後に、各試験項番の狙いを「001: ～」の形の箇条書きで1行ずつ書いてください（表にはしないでください）。\n空欄にした期待値がある場合は、続けて「期待値の未記入」として、空欄にした理由と、記入するために必要な資料・情報を箇条書きで書いてください。\n\n# 例\n条件の表：\n| 種類 | 対象 | 項目 | パターン | 具体値 |\n| --- | --- | --- | --- | --- |\n| 入力 | ログインAPI | リクエスト | 必須項目あり | login() |\n| 機能 | 会員確認 | 会員情報の検索 | 見つかる | true |\n| 機能 | 会員確認 | 会員情報の検索 | 見つからない | false |\n| 機能 | 状態確認 | アカウント状態 | ロック中 | locked |\n| 出力 | レスポンス | 結果コード | エラー | ERR |\n\n返す表：\n| 種類 | 対象 | 項目 | パターン | 具体値 | 001 | 002 |\n| --- | --- | --- | --- | --- | --- | --- |\n| 入力 | ログインAPI | リクエスト | 必須項目あり | login() | ○ | ○ |\n| 機能 | 会員確認 | 会員情報の検索 | 見つかる | true |  | ○ |\n| 機能 | 会員確認 | 会員情報の検索 | 見つからない | false | ○ |  |\n| 機能 | 状態確認 | アカウント状態 | ロック中 | locked | − | ○ |\n| 出力 | レスポンス | 結果コード | エラー | ERR |  |  |\n\n- 001: 会員情報が見つからない場合（アカウント状態の確認には到達しない）\n- 002: 会員情報は見つかるが、アカウントがロック中の場合\n\n期待値の未記入：\n- 参考資料が渡されていないため、出力の行はすべて空欄にした\n- 記入には、会員情報が見つからない場合とアカウントがロック中の場合の応答仕様（結果コード）が分かる設計書が必要\n\n※ 上の例は書式の説明用で、参考資料がない場合の書き方です。実際の試験ケースは、下の条件の表（と、渡された参考資料）だけをもとに設計してください。\n\n# 条件の表\n{{MATRIX}}";
+
 // ---- core/marks.js ----
 // 印の定義と、読み込み時の表記揺れの正規化（書式仕様書 4.3・5章）
 const Marks = (() => {
@@ -540,6 +633,23 @@ const Matrix = (() => {
     };
   }
 
+  // ブラウザに保存しておいたデータが、マトリクスとして正しい形かを確かめる
+  function isValid(m) {
+    const isText = (v) => typeof v === 'string';
+    const isTextList = (v) => Array.isArray(v) && v.every(isText);
+    return (
+      !!m &&
+      isTextList(m.headers) && m.headers.length >= 1 &&
+      isText(m.valueHeader) &&
+      Number.isInteger(m.testCount) && m.testCount >= 0 &&
+      Array.isArray(m.rows) &&
+      m.rows.every((row) =>
+        !!row && isText(row.id) && isText(row.value) &&
+        isTextList(row.levels) && row.levels.length === m.headers.length &&
+        isTextList(row.marks) && row.marks.length === m.testCount)
+    );
+  }
+
   // ---------- 行 ----------
 
   // index の位置に行を挿入する。上の行から、階層の最下段の1つ手前までの値を引き継ぐ
@@ -639,7 +749,7 @@ const Matrix = (() => {
   }
 
   return {
-    createDefault, withIds,
+    createDefault, withIds, isValid,
     insertRow, deleteRow,
     insertTest, duplicateTest, deleteTest,
     addLevel, deleteLevel, renameLevel, renameValueHeader,
@@ -829,6 +939,32 @@ const History = (() => {
 })();
 
 if (typeof module !== 'undefined') module.exports = History;
+
+// ---- core/prompt.js ----
+// AIへの指示文（要件定義書 5.7）。指示文の本文は docs/ai-prompt.md から、ビルド時に埋め込む
+const Prompt = (() => {
+  const format = typeof module !== 'undefined' ? require('./markdown.js') : MarkdownFormat;
+  const PLACEHOLDER = '{{MATRIX}}';
+
+  // 指示文の {{MATRIX}} を、左側の条件だけの表（試験の列は0列）に置き換える。
+  // AIが試験の列を作るため、画面に試験の列があっても渡さない
+  function build(template, matrix) {
+    const conditions = { ...matrix, testCount: 0, rows: matrix.rows.map((row) => ({ ...row, marks: [] })) };
+    return template.replace(PLACEHOLDER, () => format.serialize(conditions).trimEnd());
+  }
+
+  // docs/ai-prompt.md の「````text」で囲まれた部分を指示文として取り出す
+  function extract(markdown) {
+    const match = markdown.match(/^````text\r?\n([\s\S]*?)\r?\n````$/m);
+    if (!match) throw new Error('ai-prompt.md に ````text で囲まれた指示文がありません');
+    if (!match[1].includes(PLACEHOLDER)) throw new Error(`指示文に ${PLACEHOLDER} がありません`);
+    return match[1];
+  }
+
+  return { build, extract, PLACEHOLDER };
+})();
+
+if (typeof module !== 'undefined') module.exports = Prompt;
 
 // ---- ui/table.js ----
 // 表の描画。マトリクスのデータから表のHTMLを作る（書式仕様書 8章、要件定義書 5.10）
@@ -1242,6 +1378,247 @@ const Editing = (() => {
   return { attach };
 })();
 
+// ---- ui/dialogs.js ----
+// ダイアログ（ポップアップ）と、画面下に短く出すお知らせ
+const Dialogs = (() => {
+  // buttons：[{ label, primary, action(close) }]。action が false を返したときは閉じない
+  function open({ title, body, buttons, wide = false }) {
+    const dialog = document.createElement('dialog');
+    dialog.className = `dialog${wide ? ' wide' : ''}`;
+
+    const heading = Object.assign(document.createElement('h2'), { textContent: title });
+    const content = document.createElement('div');
+    content.className = 'dialog-body';
+    content.append(...[].concat(body));
+
+    const footer = document.createElement('div');
+    footer.className = 'dialog-buttons';
+    const close = () => {
+      dialog.close();
+      dialog.remove();
+    };
+    for (const { label, primary, action } of buttons) {
+      const button = Object.assign(document.createElement('button'), { type: 'button', textContent: label });
+      if (primary) button.className = 'primary';
+      button.addEventListener('click', async () => {
+        if ((await action?.()) !== false) close();
+      });
+      footer.append(button);
+    }
+
+    dialog.append(heading, content, footer);
+    dialog.addEventListener('cancel', close); // Esc キー
+    document.body.append(dialog);
+    dialog.showModal();
+    return { dialog, close };
+  }
+
+  // 見出しと箇条書きだけのダイアログ。kind は 'error' | 'warning' | 'info'
+  function message(title, lead, items = [], kind = 'info') {
+    const body = [Object.assign(document.createElement('p'), { textContent: lead })];
+    if (items.length) {
+      const list = document.createElement('ul');
+      for (const item of items) list.append(Object.assign(document.createElement('li'), { textContent: item }));
+      body.push(list);
+    }
+    const { dialog } = open({ title, body, buttons: [{ label: '閉じる', primary: true }] });
+    dialog.classList.add(kind);
+  }
+
+  let toastTimer = null;
+  function toast(text) {
+    let el = document.querySelector('.toast');
+    if (!el) {
+      el = Object.assign(document.createElement('div'), { className: 'toast' });
+      document.body.append(el);
+    }
+    el.textContent = text;
+    el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      el.hidden = true;
+    }, 2500);
+  }
+
+  return { open, message, toast };
+})();
+
+// ---- ui/storage.js ----
+// ブラウザ内への一時保存（要件定義書 5.5）
+//
+// file:// で開いたページは、同じPCのほかの file:// のページと保存領域を共有するため、
+// このツール専用の名前（KEY）で保存する。キャッシュを消すと消えるので、バックアップはMarkdownの出力で行う
+const AutoSave = (() => {
+  const KEY = 'test-matrix-editor/matrix';
+  const VERSION = 1;
+
+  function available() {
+    try {
+      const probe = `${KEY}/probe`;
+      localStorage.setItem(probe, '1');
+      localStorage.removeItem(probe);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // 保存できたら true。容量不足などで保存できなければ false
+  function save(matrix) {
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ version: VERSION, savedAt: new Date().toISOString(), matrix }));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // 保存されたデータが無い・壊れている場合は null
+  function load() {
+    try {
+      const data = JSON.parse(localStorage.getItem(KEY));
+      return data?.version === VERSION && Matrix.isValid(data.matrix) ? data.matrix : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  return { available, save, load };
+})();
+
+// ---- ui/toolbar.js ----
+// ツールバーの「Markdown出力」「読み込み」「指示文コピー」（要件定義書 5.4・5.7・5.9）
+const Toolbar = (() => {
+  function attach({ getMatrix, importMarkdown }) {
+    const on = (action, handler) => document.querySelector(`[data-action="${action}"]`).addEventListener('click', handler);
+    on('export', () => openExport(getMatrix()));
+    on('import', () => openImport(importMarkdown));
+    on('copy-prompt', () => copyPrompt(getMatrix()));
+  }
+
+  // ---------- Markdown出力 ----------
+
+  function openExport(matrix) {
+    const text = MarkdownFormat.serialize(matrix);
+    const area = Object.assign(document.createElement('textarea'), { value: text, readOnly: true, className: 'markdown-area' });
+    Dialogs.open({
+      title: 'Markdown出力',
+      wide: true,
+      body: [area],
+      buttons: [
+        { label: '閉じる' },
+        { label: '.md ファイルとして保存', action: () => saveFile(text) },
+        { label: 'コピー', primary: true, action: () => copyAndNotify(text, 'Markdownをコピーしました') },
+      ],
+    });
+  }
+
+  function saveFile(text) {
+    const pad = (n) => String(n).padStart(2, '0');
+    const d = new Date();
+    const name = `test-matrix-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.md`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'text/markdown' }));
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    Dialogs.toast(`${name} を保存しました`);
+  }
+
+  // ---------- 読み込み ----------
+
+  function openImport(importMarkdown) {
+    const area = Object.assign(document.createElement('textarea'), {
+      className: 'markdown-area',
+      placeholder: 'AIが返したMarkdownを、説明文ごと貼り付けてください。',
+    });
+    const file = Object.assign(document.createElement('input'), { type: 'file', accept: '.md,.txt,text/markdown,text/plain' });
+    file.addEventListener('change', async () => {
+      if (file.files[0]) area.value = await file.files[0].text();
+    });
+    const fileRow = document.createElement('label');
+    fileRow.className = 'file-row';
+    fileRow.append('ファイルから読み込む：', file);
+
+    Dialogs.open({
+      title: '読み込み',
+      wide: true,
+      body: [fileRow, area],
+      buttons: [
+        { label: 'キャンセル' },
+        { label: '読み込む', primary: true, action: () => submit() },
+      ],
+    });
+    area.focus();
+
+    function submit() {
+      if (!area.value.trim()) return false;
+      const result = importMarkdown(area.value);
+      if (!result.ok) {
+        showErrors(result.errors);
+        return false; // 直して読み込み直せるよう、読み込みのダイアログは閉じない
+      }
+      if (result.warnings.length) showWarnings(result.warnings);
+      else Dialogs.toast('読み込みました');
+      return true;
+    }
+  }
+
+  function showErrors(errors) {
+    const items = errors.map((e) => `${e.code}：${e.message}${e.lines.length ? `（${e.lines.join('・')}行目）` : ''}`);
+    Dialogs.message('読み込めませんでした', '表の形が崩れているため、読み込みを中止しました。', items, 'error');
+  }
+
+  function showWarnings(warnings) {
+    const items = warnings.map((w) => `${w.code}：${w.message}`);
+    const lead = `読み込みましたが、確認が必要な点が${warnings.length}件あります。色の付いたセルを確認してください。`;
+    Dialogs.message('読み込みました（警告あり）', lead, items, 'warning');
+  }
+
+  // ---------- 指示文コピー ----------
+
+  function copyPrompt(matrix) {
+    copyAndNotify(Prompt.build(PROMPT_TEMPLATE, matrix), 'AIへの指示文と条件の表をコピーしました');
+  }
+
+  // ---------- クリップボード ----------
+
+  async function copyAndNotify(text, done) {
+    if (await copyText(text)) {
+      Dialogs.toast(done);
+      return;
+    }
+    // コピーできない環境では、表示して手でコピーしてもらう
+    const area = Object.assign(document.createElement('textarea'), { value: text, readOnly: true, className: 'markdown-area' });
+    Dialogs.open({ title: 'コピーできませんでした', wide: true, body: [area], buttons: [{ label: '閉じる', primary: true }] });
+    area.select();
+  }
+
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (e) {
+      // 古い方法で試す
+      const area = Object.assign(document.createElement('textarea'), { value: text });
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.append(area);
+      area.select();
+      let ok = false;
+      try {
+        ok = document.execCommand('copy');
+      } catch (_) {
+        ok = false;
+      }
+      area.remove();
+      return ok;
+    }
+  }
+
+  return { attach };
+})();
+
 // ---- app.js ----
 // 画面の起動処理。各モジュールを組み合わせて画面を動かす
 const App = (() => {
@@ -1253,8 +1630,11 @@ const App = (() => {
   };
 
   // 履歴には、データと「そのデータを読み込んだときの警告」を組にして積む。
-  // 読み込んだ直後の状態に戻したときは、警告の強調表示も元に戻る
-  let history = History.create({ matrix: Matrix.createDefault(), warnings: [] });
+  // 読み込んだ直後の状態に戻したときは、警告の強調表示も元に戻る。
+  // 起動時は、ブラウザに保存しておいたデータがあればそれを使う
+  const saved = AutoSave.load();
+  let history = History.create({ matrix: saved || Matrix.createDefault(), warnings: [] });
+  let savedAt = saved ? new Date() : null;
 
   const editing = Editing.attach({
     container,
@@ -1264,6 +1644,8 @@ const App = (() => {
     redo,
     refresh: render,
   });
+
+  Toolbar.attach({ getMatrix: () => history.present.matrix, importMarkdown });
 
   function render() {
     const { matrix, warnings } = history.present;
@@ -1276,10 +1658,21 @@ const App = (() => {
     });
     buttons.undo.disabled = !History.canUndo(history);
     buttons.redo.disabled = !History.canRedo(history);
+    renderStatus();
+  }
+
+  function renderStatus() {
+    const { matrix } = history.present;
+    const time = savedAt && savedAt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     status.textContent = [
       `条件 ${matrix.rows.length}行・試験 ${matrix.testCount}列`,
-      `ブラウザ内の保存：${canUseStorage() ? '利用可能' : '利用不可（Markdownの出力でバックアップしてください）'}`,
+      savedAt ? `ブラウザ内に保存しました（${time}）` : 'ブラウザ内に保存できません。Markdown出力でバックアップしてください',
     ].join('　｜　');
+  }
+
+  // 変更のたびにブラウザ内へ保存する
+  function save() {
+    savedAt = AutoSave.save(history.present.matrix) ? new Date() : null;
   }
 
   // データを変える操作。変わらなければ履歴に積まない。編集すると警告の強調表示は消える
@@ -1287,20 +1680,23 @@ const App = (() => {
     const matrix = operation(history.present.matrix);
     if (matrix === history.present.matrix) return render();
     history = History.push(history, { matrix, warnings: [] });
+    save();
     render();
   }
 
   function undo() {
     history = History.undo(history);
+    save();
     render();
   }
 
   function redo() {
     history = History.redo(history);
+    save();
     render();
   }
 
-  // Markdownを読み込む。読み込めたら1回の操作として履歴に積む（ダイアログはM5で作る）
+  // Markdownを読み込む。読み込めたら1回の操作として履歴に積む
   function importMarkdown(text) {
     const result = MarkdownFormat.parse(text);
     if (!result.ok) return result;
@@ -1308,19 +1704,9 @@ const App = (() => {
     const changed = Checks.compareLeft(history.present.matrix, matrix);
     if (changed) result.warnings.push(changed);
     history = History.push(history, { matrix, warnings: result.warnings });
+    save();
     render();
     return result;
-  }
-
-  function canUseStorage() {
-    try {
-      const key = '__tme_check__';
-      localStorage.setItem(key, '1');
-      localStorage.removeItem(key);
-      return true;
-    } catch (e) {
-      return false;
-    }
   }
 
   buttons.undo.addEventListener('click', undo);

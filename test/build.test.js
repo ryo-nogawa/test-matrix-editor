@@ -18,9 +18,11 @@ test('まとめたスクリプトが、ブラウザと同じく1つのスクリ�
       set: () => true,
     });
   const context = vm.createContext({ document: fake(), window: fake() });
-  vm.runInContext(`${script}\nthis.core = { MarkdownFormat, Matrix, Checks, History, App };`, context);
-  const { MarkdownFormat, Matrix, Checks, History, App } = context.core;
+  vm.runInContext(`${script}\nthis.core = { MarkdownFormat, Matrix, Checks, History, Prompt, PROMPT_TEMPLATE, App };`, context);
+  const { MarkdownFormat, Matrix, Checks, History, Prompt, PROMPT_TEMPLATE, App } = context.core;
   assert.equal(typeof App.importMarkdown, 'function');
+  assert.ok(PROMPT_TEMPLATE.includes('{{MATRIX}}'), 'docs/ai-prompt.md の指示文が埋め込まれている');
+  assert.ok(Prompt.build(PROMPT_TEMPLATE, Matrix.createDefault()).includes('| 入力 |'));
   const result = MarkdownFormat.parse('| 種類 | 具体値 | 001 |\n| --- | --- | --- |\n| 入力 | x | ◯ |');
   assert.equal(result.ok, true);
   assert.equal(result.matrix.rows[0].marks[0], '○');

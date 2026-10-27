@@ -26,6 +26,16 @@ test('ID：読み込んだデータの行に、重ならない ID を付ける',
   assert.deepEqual(ids(M.withIds(partial)), ['r7', 'r8']);
 });
 
+test('保存データの検証：正しい形なら true、壊れていれば false', () => {
+  assert.equal(M.isValid(base()), true);
+  assert.equal(M.isValid(M.createDefault()), true);
+  assert.equal(M.isValid(null), false);
+  assert.equal(M.isValid({ ...base(), testCount: 3 }), false, '印の数と試験の列の数が合わない');
+  assert.equal(M.isValid({ ...base(), headers: [] }), false, '階層の列が無い');
+  assert.equal(M.isValid({ ...base(), rows: [{ ...base().rows[0], levels: ['入力'] }] }), false, '階層の値の数が合わない');
+  assert.equal(M.isValid({ ...base(), rows: [{ ...base().rows[0], id: undefined }] }), false, 'ID が無い');
+});
+
 // ---------- 行 ----------
 
 test('行の挿入：上の行から、階層の最下段の1つ手前までを引き継ぐ', () => {
