@@ -4,26 +4,9 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const { serialize, parse, testNumbers } = require('../src/core/markdown.js');
+const { LOGIN_ROWS, loginMatrix } = require('./helpers.js');
 
 const fixture = (name) => fs.readFileSync(path.join(__dirname, 'fixtures', name), 'utf8');
-
-const HEADERS = ['種類', '対象', '項目', 'パターン'];
-const LOGIN_ROWS = [
-  [['入力', 'ログインAPI', 'リクエスト', '必須項目あり'], 'login()'],
-  [['機能', '会員確認', '会員情報の検索', '見つかる'], 'true'],
-  [['機能', '会員確認', '会員情報の検索', '見つからない'], 'false'],
-  [['機能', '状態確認', 'アカウント状態', 'ロック中'], 'locked'],
-  [['出力', 'レスポンス', '結果コード', 'エラー'], 'ERR'],
-];
-
-function loginMatrix(marksByRow = LOGIN_ROWS.map(() => [])) {
-  return {
-    headers: HEADERS,
-    valueHeader: '具体値',
-    testCount: marksByRow[0].length,
-    rows: LOGIN_ROWS.map(([levels, value], i) => ({ levels, value, marks: marksByRow[i] })),
-  };
-}
 
 const codes = (list) => list.map((x) => x.code);
 

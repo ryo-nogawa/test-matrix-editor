@@ -263,6 +263,324 @@ const MarkdownFormat = (() => {
 
 if (typeof module !== 'undefined') module.exports = MarkdownFormat;
 
+// ---- core/matrix.js ----
+// マトリクスのデータ操作。どの関数も元のデータを変えず、新しいデータを返す
+//
+// データの形は markdown.js と同じで、行に画面で行を追うための id が付く：
+//   { headers, valueHeader, testCount, rows: [{ id, levels, value, marks }] }
+// 試験項番は「左から何番目か」で決まるため、データには持たない
+const Matrix = (() => {
+  const DEFAULT_HEADERS = ['種類', '対象', '項目', 'パターン'];
+  const DEFAULT_VALUE_HEADER = '具体値';
+  const DEFAULT_KINDS = ['入力', '機能', '出力'];
+  const NEW_LEVEL_HEADER = '新しい階層';
+
+  // ---------- 作成・ID ----------
+
+  // まだ id が無い行に、他の行と重ならない id を付ける
+  function withIds(matrix) {
+    let next = nextIdNumber(matrix.rows);
+    return { ...matrix, rows: matrix.rows.map((row) => (row.id ? row : { ...row, id: `r${next++}` })) };
+  }
+
+  function nextIdNumber(rows) {
+    const numbers = rows.map((r) => Number(/^r(\d+)$/.exec(r.id || '')?.[1] || 0));
+    return Math.max(0, ...numbers) + 1;
+  }
+
+  function emptyRow(id, levelCount, testCount) {
+    return { id, levels: Array(levelCount).fill(''), value: '', marks: Array(testCount).fill('') };
+  }
+
+  // 新しく作るときの初期状態。「種類」の初期分類を1行ずつ用意する
+  function createDefault() {
+    return {
+      headers: [...DEFAULT_HEADERS],
+      valueHeader: DEFAULT_VALUE_HEADER,
+      testCount: 0,
+      rows: DEFAULT_KINDS.map((kind, i) => {
+        const row = emptyRow(`r${i + 1}`, DEFAULT_HEADERS.length, 0);
+        row.levels[0] = kind;
+        return row;
+      }),
+    };
+  }
+
+  // ---------- 行 ----------
+
+  // index の位置に行を挿入する。上の行から、階層の最下段の1つ手前までの値を引き継ぐ
+  function insertRow(matrix, index) {
+    const row = emptyRow(`r${nextIdNumber(matrix.rows)}`, matrix.headers.length, matrix.testCount);
+    const above = matrix.rows[index - 1];
+    if (above) {
+      for (let i = 0; i < matrix.headers.length - 1; i++) row.levels[i] = above.levels[i];
+    }
+    const rows = [...matrix.rows];
+    rows.splice(index, 0, row);
+    return { ...matrix, rows };
+  }
+
+  function deleteRow(matrix, index) {
+    return { ...matrix, rows: matrix.rows.filter((_, i) => i !== index) };
+  }
+
+  // ---------- 試験の列 ----------
+
+  function mapMarks(matrix, testCount, fn) {
+    return { ...matrix, testCount, rows: matrix.rows.map((row) => ({ ...row, marks: fn([...row.marks]) })) };
+  }
+
+  // index の位置（0 なら先頭）に空の試験の列を挿入する
+  function insertTest(matrix, index) {
+    return mapMarks(matrix, matrix.testCount + 1, (marks) => {
+      marks.splice(index, 0, '');
+      return marks;
+    });
+  }
+
+  // index の試験の列を複製し、すぐ右に挿入する
+  function duplicateTest(matrix, index) {
+    return mapMarks(matrix, matrix.testCount + 1, (marks) => {
+      marks.splice(index + 1, 0, marks[index]);
+      return marks;
+    });
+  }
+
+  function deleteTest(matrix, index) {
+    return mapMarks(matrix, matrix.testCount - 1, (marks) => marks.filter((_, i) => i !== index));
+  }
+
+  // ---------- 階層の列・見出し ----------
+
+  // 階層の列の右端（具体値の列の左）に列を追加する
+  function addLevel(matrix) {
+    return {
+      ...matrix,
+      headers: [...matrix.headers, NEW_LEVEL_HEADER],
+      rows: matrix.rows.map((row) => ({ ...row, levels: [...row.levels, ''] })),
+    };
+  }
+
+  // 階層の列を削除する。階層の列は最低1列残す
+  function deleteLevel(matrix, index) {
+    if (matrix.headers.length <= 1) return matrix;
+    return {
+      ...matrix,
+      headers: matrix.headers.filter((_, i) => i !== index),
+      rows: matrix.rows.map((row) => ({ ...row, levels: row.levels.filter((_, i) => i !== index) })),
+    };
+  }
+
+  function renameLevel(matrix, index, name) {
+    return { ...matrix, headers: matrix.headers.map((h, i) => (i === index ? name : h)) };
+  }
+
+  function renameValueHeader(matrix, name) {
+    return { ...matrix, valueHeader: name };
+  }
+
+  // ---------- セル ----------
+
+  function updateRow(matrix, rowIndex, fn) {
+    return { ...matrix, rows: matrix.rows.map((row, i) => (i === rowIndex ? fn(row) : row)) };
+  }
+
+  function setLevel(matrix, rowIndex, levelIndex, text) {
+    return updateRow(matrix, rowIndex, (row) => ({ ...row, levels: row.levels.map((v, i) => (i === levelIndex ? text : v)) }));
+  }
+
+  function setValue(matrix, rowIndex, text) {
+    return updateRow(matrix, rowIndex, (row) => ({ ...row, value: text }));
+  }
+
+  function setMark(matrix, rowIndex, testIndex, mark) {
+    return updateRow(matrix, rowIndex, (row) => ({ ...row, marks: row.marks.map((m, i) => (i === testIndex ? mark : m)) }));
+  }
+
+  return {
+    createDefault, withIds,
+    insertRow, deleteRow,
+    insertTest, duplicateTest, deleteTest,
+    addLevel, deleteLevel, renameLevel, renameValueHeader,
+    setLevel, setValue, setMark,
+  };
+})();
+
+if (typeof module !== 'undefined') module.exports = Matrix;
+
+// ---- core/checks.js ----
+// 改変チェック（書式仕様書 7章）、網羅チェック、セル結合の範囲の計算（書式仕様書 8章）
+const Checks = (() => {
+  const marks = typeof module !== 'undefined' ? require('./marks.js') : Marks;
+
+  // ---------- 改変チェック ----------
+
+  const rowKey = (row) => JSON.stringify([...row.levels, row.value]);
+
+  // 2つの並びで、順番を保ったまま一致する組を最も多く取る（最長共通部分列）
+  function matchInOrder(a, b) {
+    const dp = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
+    for (let i = a.length - 1; i >= 0; i--) {
+      for (let j = b.length - 1; j >= 0; j--) {
+        dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+      }
+    }
+    const pairs = [];
+    let i = 0;
+    let j = 0;
+    while (i < a.length && j < b.length) {
+      if (a[i] === b[j]) pairs.push([i++, j++]);
+      else if (dp[i + 1][j] >= dp[i][j + 1]) i++;
+      else j++;
+    }
+    return pairs;
+  }
+
+  // 読み込む直前の画面（current）と、読み込んだ表（imported）の左側の条件を比べる。
+  // 差分が無ければ null、あれば W5、比較元が空なら W6 を返す
+  function compareLeft(current, imported) {
+    if (current.rows.length === 0) {
+      return { code: 'W6', message: '画面に条件が無いため、改変チェックを省略しました', cells: [] };
+    }
+
+    const headerChanged =
+      current.valueHeader !== imported.valueHeader ||
+      current.headers.length !== imported.headers.length ||
+      current.headers.some((h, i) => h !== imported.headers[i]);
+
+    const a = current.rows.map(rowKey);
+    const b = imported.rows.map(rowKey);
+    const added = [];
+    const changed = [];
+    let deleted = 0;
+    // 一致した行と行の間に残った行は、上から順に「書き換え」として対応付け、余りを追加・削除とする
+    const pairs = [...matchInOrder(a, b), [a.length, b.length]];
+    let prevA = 0;
+    let prevB = 0;
+    for (const [ia, ib] of pairs) {
+      const restA = ia - prevA;
+      const restB = ib - prevB;
+      for (let k = 0; k < restB; k++) (k < restA ? changed : added).push(prevB + k);
+      deleted += Math.max(0, restA - restB);
+      prevA = ia + 1;
+      prevB = ib + 1;
+    }
+
+    if (!headerChanged && added.length === 0 && changed.length === 0 && deleted === 0) return null;
+
+    const parts = [];
+    if (headerChanged) parts.push('見出しの変更');
+    if (added.length) parts.push(`追加${added.length}行`);
+    if (changed.length) parts.push(`書き換え${changed.length}行`);
+    if (deleted) parts.push(`削除${deleted}行`);
+    return {
+      code: 'W5',
+      message: `左側の条件が、読み込む前から変わっています（${parts.join('、')}）`,
+      cells: [...changed, ...added].sort((x, y) => x - y).map((row) => ({ row, col: null })),
+      details: { headerChanged, added, changed, deleted },
+    };
+  }
+
+  // ---------- 網羅チェック ----------
+
+  // ○ が1つも無い行と、○ が1つも無い試験の列の番号（0始まり）を返す
+  function coverage(matrix) {
+    const has = (m) => m === marks.CIRCLE;
+    const rows = [];
+    matrix.rows.forEach((row, r) => {
+      if (!row.marks.some(has)) rows.push(r);
+    });
+    const tests = [];
+    for (let t = 0; t < matrix.testCount; t++) {
+      if (!matrix.rows.some((row) => has(row.marks[t]))) tests.push(t);
+    }
+    return { rows, tests };
+  }
+
+  // ---------- セル結合 ----------
+
+  // 階層の列ごとに、各行のセルの縦の結合数を返す。spans[列][行]
+  //   1以上：その行から始まるセルが何行分を占めるか
+  //   0    ：上のセルに結合されて表示しない
+  // 同じ値が上下に続き、かつ親の列でも同じセルに結合されているときだけ結合する。空欄は結合しない
+  function mergeSpans(matrix) {
+    const spans = [];
+    let parentGroup = matrix.rows.map(() => 0); // 親の列での「結合のまとまり」の番号
+    matrix.headers.forEach((_, c) => {
+      const group = [];
+      const span = [];
+      let start = -1;
+      matrix.rows.forEach((row, r) => {
+        const value = row.levels[c];
+        const joins = r > 0 && value !== '' && value === matrix.rows[r - 1].levels[c] && parentGroup[r] === parentGroup[r - 1];
+        if (joins) {
+          group.push(group[r - 1]);
+          span.push(0);
+          span[start]++;
+        } else {
+          group.push(r);
+          span.push(1);
+          start = r;
+        }
+      });
+      spans.push(span);
+      parentGroup = group;
+    });
+    return spans;
+  }
+
+  return { compareLeft, coverage, mergeSpans };
+})();
+
+if (typeof module !== 'undefined') module.exports = Checks;
+
+// ---- core/history.js ----
+// 元に戻す・やり直し。操作のたびに「操作後のデータ」を積み重ねる
+//
+// データは操作のたびに新しく作られる（matrix.js）ため、前の状態をそのまま取っておける。
+// 変わっていない行は前の状態と共有されるので、履歴を持ってもメモリはあまり増えない
+const History = (() => {
+  const DEFAULT_LIMIT = 100;
+
+  function create(present, limit = DEFAULT_LIMIT) {
+    return { past: [], present, future: [], limit };
+  }
+
+  // 新しい操作を記録する。やり直しの履歴は消える。読み込みも1回の操作として記録する
+  function push(history, next) {
+    if (next === history.present) return history;
+    const past = [...history.past, history.present].slice(-history.limit);
+    return { ...history, past, present: next, future: [] };
+  }
+
+  function undo(history) {
+    if (!canUndo(history)) return history;
+    return {
+      ...history,
+      past: history.past.slice(0, -1),
+      present: history.past[history.past.length - 1],
+      future: [history.present, ...history.future],
+    };
+  }
+
+  function redo(history) {
+    if (!canRedo(history)) return history;
+    return {
+      ...history,
+      past: [...history.past, history.present],
+      present: history.future[0],
+      future: history.future.slice(1),
+    };
+  }
+
+  const canUndo = (history) => history.past.length > 0;
+  const canRedo = (history) => history.future.length > 0;
+
+  return { create, push, undo, redo, canUndo, canRedo };
+})();
+
+if (typeof module !== 'undefined') module.exports = History;
+
 // ---- app.js ----
 // 画面の起動処理。各モジュールを組み合わせて画面を動かす（M3以降で実装）
 (() => {
