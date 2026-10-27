@@ -182,6 +182,12 @@ body {
   right: -11px;
   z-index: 4;
   transform: translateY(-50%);
+  visibility: hidden; /* 隠している間は押せない（opacity と違い、誤って押されない） */
+}
+
+/* 左側の見出しにマウスを乗せたときだけ表示する（常に出ていると「具体値」の文字に重なるため） */
+.matrix thead tr:has(th.left:hover) .add-level {
+  visibility: visible;
 }
 
 /* 試験の列を右端に追加する＋ */
