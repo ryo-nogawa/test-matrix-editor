@@ -1,0 +1,47 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Meiryo", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  font-size: 14px;
+  color: #222;
+  background: #fff;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #c9ced6;
+  background: #f7f8fa;
+}
+
+.toolbar button {
+  padding: 6px 16px;
+  border: 1px solid #9aa0a8;
+  border-radius: 6px;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.toolbar button:disabled {
+  color: #999;
+  cursor: default;
+}
+
+#app {
+  padding: 16px;
+}
+
+.placeholder {
+  color: #777;
+}
+
+.status {
+  padding: 4px 16px;
+  color: #666;
+  font-size: 12px;
+}

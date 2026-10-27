@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edge 動作確認</title>
+<style>
+  body { font-family: "Meiryo", "Hiragino Sans", sans-serif; margin: 24px; color: #222; line-height: 1.6; }
+  h1 { font-size: 20px; }
+  h2 { font-size: 16px; margin-top: 28px; border-bottom: 1px solid #ccd; padding-bottom: 4px; }
+  table { border-collapse: collapse; margin: 8px 0; }
+  th, td { border: 1px solid #ccd; padding: 4px 10px; text-align: left; vertical-align: top; }
+  th { background: #eef1f5; }
+  .ok { color: #11772f; font-weight: bold; }
+  .ng { color: #c62828; font-weight: bold; }
+  .wait { color: #777; }
+  button { padding: 4px 12px; margin-right: 8px; }
+  .note { color: #555; font-size: 14px; }
+  textarea { width: 100%; height: 160px; font-family: monospace; }
+</style>
+</head>
+<body>
+<h1>試験マトリクス作成支援ツール：Edge 動作確認</h1>
+<p class="note">
+  このファイルをエクスプローラーからダブルクリックして（<code>file://</code> で）Edgeで開いてください。<br>
+  上から順に確認し、最後に「結果をコピー」で結果を貼り付けて共有してください。
+</p>
+
+<h2>1. 環境</h2>
+<table id="env"></table>
+
+<h2>2. ブラウザ内の保存（localStorage）</h2>
+<p class="note">
+  手順：(1) このページを再読み込み（F5）する → (2) Edgeをすべて閉じてから、もう一度このファイルを開く。<br>
+  そのたびに「開いた回数」が増えていれば、保存が引き継がれています。
+</p>
+<table id="storage"></table>
+<button id="clear-storage">確認用のデータを消す</button>
+
+<h2>3. 予備の保存先（IndexedDB）</h2>
+<table id="idb"></table>
+
+<h2>4. クリップボードへのコピー</h2>
+<p class="note">ボタンを押した後、メモ帳などに貼り付けて「コピーできました」と表示されるか確かめてください。</p>
+<button id="copy-api">方法A でコピー</button>
+<button id="copy-legacy">方法B でコピー</button>
+<table id="clipboard"></table>
+
+<h2>5. ファイルの保存</h2>
+<p class="note">ボタンを押すと <code>check.md</code> がダウンロードされるか確かめてください。</p>
+<button id="download">check.md を保存</button>
+<table id="save"></table>
+
+<h2>6. ファイルの読み込み</h2>
+<p class="note">5. で保存した <code>check.md</code> を選んでください。</p>
+<input type="file" id="file" accept=".md,.txt">
+<table id="load"></table>
+
+<h2>7. 結果</h2>
+<button id="copy-result">結果をコピー</button>
+<textarea id="result" readonly></textarea>
+
+<script>
+  const results = {};
+  const KEY = 'tme-edge-check';
+
+  function setRow(tableId, name, ok, detail) {
+    results[tableId + ':' + name] = { ok, detail };
+    const table = document.getElementById(tableId);
+    let row = [...table.rows].find((r) => r.dataset.name === name);
+    if (!row) {
+      row = table.insertRow();
+      row.dataset.name = name;
+      row.insertCell().textContent = name;
+      row.insertCell();
+      row.insertCell();
+    }
+    const status = row.cells[1];
+    status.className = ok === null ? 'wait' : ok ? 'ok' : 'ng';
+    status.textContent = ok === null ? '未確認' : ok ? 'OK' : 'NG';
+    row.cells[2].textContent = detail || '';
+    renderResult();
+  }
+
+  function renderResult() {
+    const lines = Object.entries(results).map(([k, v]) => {
+      const mark = v.ok === null ? '未確認' : v.ok ? 'OK' : 'NG';
+      return `${k} = ${mark}${v.detail ? ' (' + v.detail + ')' : ''}`;
+    });
+    document.getElementById('result').value = lines.join('\n');
+  }
+
+  // 1. 環境
+  setRow('env', 'ブラウザ', true, navigator.userAgent);
+  setRow('env', 'プロトコル', location.protocol === 'file:', location.protocol);
+  setRow('env', 'オリジン', true, String(location.origin));
+  setRow('env', '安全なコンテキスト', window.isSecureContext, String(window.isSecureContext));
+
+  // 2. localStorage
+  try {
+    const data = JSON.parse(localStorage.getItem(KEY) || '{"count":0}');
+    data.count += 1;
+    data.last = new Date().toLocaleString();
+    localStorage.setItem(KEY, JSON.stringify(data));
+    const back = JSON.parse(localStorage.getItem(KEY));
+    setRow('storage', '書き込みと読み込み', back.count === data.count, '');
+    setRow('storage', '開いた回数', data.count > 1 ? true : null,
+      `${data.count} 回目` + (data.count > 1 ? '（前回の保存が引き継がれています）' : '（再読み込みして確認してください）'));
+    setRow('storage', '保存されている項目の数', true,
+      `${localStorage.length} 件（同じPCの file:// のページで共有される領域です）`);
+  } catch (e) {
+    setRow('storage', '書き込みと読み込み', false, e.name + ': ' + e.message);
+  }
+  document.getElementById('clear-storage').addEventListener('click', () => {
+    try { localStorage.removeItem(KEY); alert('消しました。再読み込みすると 1 回目に戻ります。'); }
+    catch (e) { alert('消せませんでした: ' + e.message); }
+  });
+
+  // 3. IndexedDB
+  try {
+    const req = indexedDB.open('tme-edge-check', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('kv');
+    req.onsuccess = () => {
+      const db = req.result;
+      const tx = db.transaction('kv', 'readwrite');
+      tx.objectStore('kv').put('ok', 'check');
+      tx.oncomplete = () => { setRow('idb', '書き込み', true, ''); db.close(); };
+      tx.onerror = () => setRow('idb', '書き込み', false, String(tx.error));
+    };
+    req.onerror = () => setRow('idb', '書き込み', false, String(req.error));
+  } catch (e) {
+    setRow('idb', '書き込み', false, e.name + ': ' + e.message);
+  }
+
+  // 4. クリップボード
+  const COPY_TEXT = 'コピーできました（試験マトリクス作成支援ツールの動作確認）';
+  setRow('clipboard', '方法A（Clipboard API）', null, '');
+  setRow('clipboard', '方法B（execCommand）', null, '');
+  document.getElementById('copy-api').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(COPY_TEXT);
+      setRow('clipboard', '方法A（Clipboard API）', true, 'エラーなし。貼り付けて確認してください');
+    } catch (e) {
+      setRow('clipboard', '方法A（Clipboard API）', false, e.name + ': ' + e.message);
+    }
+  });
+  document.getElementById('copy-legacy').addEventListener('click', () => {
+    const ta = document.createElement('textarea');
+    ta.value = COPY_TEXT;
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    ta.remove();
+    setRow('clipboard', '方法B（execCommand）', ok, ok ? 'エラーなし。貼り付けて確認してください' : '失敗');
+  });
+
+  // 5. ファイルの保存
+  setRow('save', 'ダウンロード', null, '');
+  document.getElementById('download').addEventListener('click', () => {
+    try {
+      const blob = new Blob(['| 種類 | 具体値 |\n| --- | --- |\n| 入力 | check |\n'], { type: 'text/markdown' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'check.md';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      setRow('save', 'ダウンロード', true, 'エラーなし。ファイルが保存されたか確認してください');
+    } catch (e) {
+      setRow('save', 'ダウンロード', false, e.name + ': ' + e.message);
+    }
+  });
+
+  // 6. ファイルの読み込み
+  setRow('load', '読み込み', null, '');
+  document.getElementById('file').addEventListener('change', (ev) => {
+    const file = ev.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setRow('load', '読み込み', true, `${file.name}：1行目「${reader.result.split('\n')[0]}」`);
+    reader.onerror = () => setRow('load', '読み込み', false, String(reader.error));
+    reader.readAsText(file, 'UTF-8');
+  });
+
+  // 7. 結果
+  document.getElementById('copy-result').addEventListener('click', () => {
+    const ta = document.getElementById('result');
+    ta.select();
+    document.execCommand('copy');
+  });
+</script>
+</body>
+</html>

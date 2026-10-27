@@ -71,9 +71,9 @@ test-matrix-editor/
 
 ### M0：準備と事前確認
 
-- [ ] Edgeで `file://` のブラウザ保存が使えるかを確かめる確認用HTML（`scripts/edge-storage-check.html`）を作る → **Ryoさんの環境のEdgeで試していただく**
-- [ ] フォルダ構成、ビルドスクリプト、テストの実行方法を用意する
-- [ ] 空の画面が `dist/` に出力され、Edgeで開けることを確認する
+- [x] `file://` のブラウザ保存が使えるかを確かめる確認用HTML（`scripts/edge-storage-check.html`）を作る → Chromeで、再起動後も保存が引き継がれることを確認
+- [x] フォルダ構成、ビルドスクリプト、テストの実行方法を用意する
+- [x] 空の画面が `dist/` に出力され、ブラウザで開けることを確認する
 
 ### M1：Markdownの出力・読み込み（core）
 
@@ -124,7 +124,7 @@ test-matrix-editor/
 | --- | --- |
 | `src/core/` | `node --test` で自動テスト。書式仕様書のエラー・警告コードごとにテストを用意する |
 | `src/ui/` | 画面を操作して確認するチェックリストを用意し、マイルストーンごとに確認する |
-| 配布物 | Edgeで `dist/test-matrix-editor.html` を直接開いて確認する |
+| 配布物 | Chrome（Edgeと同じChromium）で `dist/test-matrix-editor.html` を直接開いて確認する |
 
 コマンド（予定）：
 
