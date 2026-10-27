@@ -50,6 +50,12 @@ body {
   cursor: pointer;
 }
 
+/* 内容を消すボタン。ほかのボタンと見分けられるよう赤字にする */
+.toolbar button.danger {
+  border-color: var(--uncovered-text);
+  color: var(--uncovered-text);
+}
+
 .toolbar button:disabled {
   color: #999;
   cursor: default;

@@ -49,6 +49,9 @@ const App = (() => {
     importSaved,
     save: () => saveToFile({ asNew: false }),
     saveAs: () => saveToFile({ asNew: true }),
+    // 表を新しく作ったときの状態に戻す。1回の操作として履歴に積むので、元に戻すで取り消せる。
+    // 名前は残す（名前の変更は元に戻すの対象外で、消すと取り消せないため）
+    clearAll: () => update(() => Matrix.createDefault()),
   });
 
   // ---------- 描画 ----------

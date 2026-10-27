@@ -1,12 +1,36 @@
-// ツールバーの「Markdown出力」「読み込み」「指示文コピー」（要件定義書 5.4・5.7・5.9）
+// ツールバーの「Markdown出力」「読み込み」「指示文コピー」「すべてクリア」（要件定義書 5.4・5.7・5.9・5.10）
 const Toolbar = (() => {
-  function attach({ getMatrix, importMarkdown, importSaved, save, saveAs }) {
+  function attach({ getMatrix, importMarkdown, importSaved, save, saveAs, clearAll }) {
     const on = (action, handler) => document.querySelector(`[data-action="${action}"]`).addEventListener('click', handler);
     on('save', save);
     on('save-as', saveAs);
     on('export', () => openExport(getMatrix()));
     on('import', () => openImport(importMarkdown, importSaved));
     on('copy-prompt', () => copyPrompt(getMatrix()));
+    on('clear', () => confirmClear(clearAll));
+  }
+
+  // ---------- すべてクリア ----------
+
+  // 押し間違えで消さないよう、確認してから消す
+  function confirmClear(clearAll) {
+    const lead = Object.assign(document.createElement('p'), {
+      textContent: '表の内容をすべて消して、新しく作ったときの状態に戻します。消した後も「元に戻す」（Ctrl+Z）で取り消せます。',
+    });
+    Dialogs.open({
+      title: 'すべてクリア',
+      body: [lead],
+      buttons: [
+        { label: 'キャンセル', primary: true },
+        {
+          label: 'クリアする',
+          action: () => {
+            clearAll();
+            Dialogs.toast('表の内容をクリアしました');
+          },
+        },
+      ],
+    });
   }
 
   // ---------- Markdown出力 ----------
